@@ -1,6 +1,6 @@
 /* Offline on localhost/HTTPS; relative scope also works under GitHub Pages. */
 const CACHE_PREFIX = 'ai103-topic-lab-';
-const CACHE = CACHE_PREFIX + '2026-10-06-v2';
+const CACHE = CACHE_PREFIX + '2026-10-06-v3';
 const shell = ['.','index.html','styles.css','core.js','app.js','data/bank.js','manifest.webmanifest','assets/icon.svg','assets/paper-grain.svg','assets/color-grain.svg','assets/inter-latin.woff2','README.md','GROUPED-QUESTION-MAP.md','THIRD_PARTY_NOTICES.txt'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {

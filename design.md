@@ -9,6 +9,8 @@ Based on the supplied ElevenLabs style reference: warm cream editorial, minimal 
 - 20px cards, 24px feature panels; flat surfaces; no heavy shadows.
 - Violet `#0447ff` and orange `#ff4704` in the decorative sphere and faint grain-textured panel washes, as requested. Buttons, links and answer states remain monochrome.
 - Grainy orange/violet swatch at the case-study entry and a small violet ribbon above the case overview, inspired by the supplied gradient references.
+- Topic, decision-family and case details use the home panel's grainy cream/orange/violet treatment and decorative sphere.
+- Continuous vertical page rails, full-width section hairlines and small dots at their intersections follow the supplied ElevenLabs grid reference. Decorative and pointer-transparent; gutters scale down on mobile.
 - Answer controls, letters and first text lines share a fixed grid and consistent line height.
 - 1280px maximum width, spacious desktop gutters; single-column mobile flow.
 - Color-independent correct/incorrect labels; black keyboard focus; 44px actions.
