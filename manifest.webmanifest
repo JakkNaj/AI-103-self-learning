@@ -1,0 +1,12 @@
+{
+  "name": "AI-103 Topic Lab",
+  "short_name": "Topic Lab",
+  "description": "Learn AI-103 decisions by topic, with comparisons and answer reasoning.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fdfcfc",
+  "theme_color": "#fdfcfc",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
