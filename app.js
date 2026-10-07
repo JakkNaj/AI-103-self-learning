@@ -14,8 +14,6 @@
     const saved = localStorage.getItem(STORE);
     if (saved) {
       const value = JSON.parse(saved);
-      // An empty notebook has no answers/notes/learned marks to invalidate.
-      if (value.schemaVersion === 1 && value.bankVersion !== bank.bankVersion && value.records && !Object.keys(value.records).length && Array.isArray(value.learnedGroupIds) && !value.learnedGroupIds.length) value.bankVersion = bank.bankVersion;
       state = core.validateBackup(value, bank);
     }
   }
@@ -28,7 +26,7 @@
   const textBlock = text => '<p style="white-space:pre-line">' + rich(text) + '</p>';
   const record = q => state.records[q.id] || {};
   const sourceNames = { authored: 'Current authored', guide: 'Guide examples', legacy: 'Earlier practice', sefstratiou: 'Sefstratiou', pvejayan: 'Praba Vejayan', examtopics: 'ExamTopics' };
-  const statusNames = { all: 'All questions', unanswered: 'Unanswered', wrong: 'Needs review', bookmarked: 'Saved questions' };
+  const statusNames = { all: 'All questions', unanswered: 'Unanswered', wrong: 'Needs review', bookmarked: 'Saved questions', confused: 'Confused' };
   const isImported = q => ['sefstratiou', 'pvejayan', 'examtopics'].includes(q.sourceId);
   const path = (group, mode = 'learn', q) => '#group=' + encodeURIComponent(group) + '&mode=' + mode + (q ? '&q=' + encodeURIComponent(q) : '');
   const casePath = (id, mode = 'read', q) => '#case=' + encodeURIComponent(id) + '&mode=' + mode + (q ? '&q=' + encodeURIComponent(q) : '');
@@ -55,12 +53,12 @@
     if (params.has('topic')) return { kind: 'topic', topic: params.get('topic') };
     if (hash === 'progress') return { kind: 'progress' };
     if (hash === 'review' || params.has('review')) return { kind: 'review' };
-    if (params.has('practice')) return { kind: 'review-practice', status: ['wrong', 'bookmarked', 'unanswered'].includes(params.get('practice')) ? params.get('practice') : 'wrong', q: params.get('q') };
+    if (params.has('practice')) return { kind: 'review-practice', status: ['wrong', 'bookmarked', 'unanswered', 'confused'].includes(params.get('practice')) ? params.get('practice') : 'wrong', q: params.get('q') };
     return { kind: 'home' };
   }
   function stats(ids) {
-    const qs = ids.map(id => questions.get(id));
-    return { total: qs.length, checked: qs.filter(q => record(q).evaluation).length, wrong: qs.filter(q => record(q).evaluation?.correct === false).length, saved: qs.filter(q => record(q).bookmark).length };
+    const qs = ids.map(id => questions.get(id)).filter(q => q && q.scored !== false);
+    return { total: qs.length, checked: qs.filter(q => record(q).evaluation).length, wrong: qs.filter(q => record(q).evaluation?.correct === false).length, saved: qs.filter(q => record(q).bookmark).length, confused: qs.filter(q => record(q).confused).length };
   }
   function groupStats(group) { return stats(group.questionIds); }
   function topicStats(topic) { return stats(topic.groupIds.flatMap(id => groups.get(id).questionIds)); }
@@ -94,11 +92,11 @@
   function renderHome() {
     const s = stats(bank.questions.map(q => q.id));
     const next = state.lastGroup && groups.get(state.lastGroup) || groups.get('08/runtime');
-    return `<section class="hero"><div><p class="eyebrow">Your AI-103 study notebook</p><h1>Learn the<br>difference.</h1><div class="stat-line"><span><strong>${bank.questions.length}</strong> questions</span><span><strong>${bank.topics.length}</strong> topics</span><span><strong>${bank.groups.length}</strong> decision families</span></div></div><div class="hero-copy"><p>Same topic. Different wording.<br>Clearer decisions.</p><p>Learn the rule, compare similar questions, then practice them together. Every answer comes with reasoning.</p></div></section>${frameLine()}
+    return `<section class="hero"><div><p class="eyebrow">Your AI-103 study notebook</p><h1>Learn the<br>difference.</h1><div class="stat-line"><span><strong>${bank.questions.length}</strong> questions</span><span><strong>${bank.topics.length}</strong> topics</span><span><strong>${bank.groups.length}</strong> decision families</span></div></div><div class="hero-copy"><p>Same topic. Different wording.<br>Clearer decisions.</p><p>Learn the rule, compare similar questions, then practice them together. Study credible alternatives, keep your notes, and revisit anything that still feels unclear.</p></div></section>${frameLine()}
       <section class="study-feature"><div><p class="eyebrow">${state.lastGroup ? 'Continue your notebook' : 'A good place to begin'}</p><h2>${heading(next.title)}</h2><p>${e(next.rule)}</p><div class="actions">${pill(path(next.id), state.lastGroup ? 'Continue learning' : 'Start with roles', true)}${s.wrong ? pill('#review', `Review ${s.wrong} mistakes`) : pill('#topic=16', 'Choosing the right service')}</div></div><div class="notebook-art" aria-hidden="true"><div class="orbit"></div><div class="sphere"></div><span class="art-caption">SMALL DIFFERENCES. CLEAR DECISIONS.</span></div></section>
       <section class="case-entry"><div class="gradient-swatch" aria-hidden="true"></div><div><p class="eyebrow">Study the shared scenario</p><h2>Case studies.</h2><p>${bank.cases.length} scenarios · ${bank.questions.filter(q => cases.has(q.caseId)).length} case-study tasks, kept together.</p></div>${pill('#cases', 'Browse case studies')}</section>${frameLine()}
       <section><div class="section-head"><div><p class="eyebrow">The syllabus, reorganized</p><h2>Choose a topic.</h2></div><label class="search-wrap"><span>Find a topic or question</span><input id="home-search" type="search" placeholder="Roles, speech, tool_choice…" autocomplete="off"></label></div><div id="home-results"><div class="topic-list">${bank.topics.map(topicRow).join('')}</div></div></section>
-      <p class="notice">200 current authored · 675 imported · 65 guide examples · 30 earlier practice. English questions and original Czech/English reasoning. Imported source keys are preserved; source caveats stay visible.</p>`;
+      <p class="notice">200 current authored · 675 source-attributed · 65 guide examples · 30 earlier practice. English questions and original Czech/English reasoning. Local revisions preserve source attribution; unresolved items are excluded from scoring. ${s.confused} confused questions ready to revisit.</p>`;
   }
   function renderTopic(topic) {
     const s = topicStats(topic), siblings = topic.groupIds.map(id => groups.get(id));
@@ -114,7 +112,7 @@
   function questionRow(q, review = false, targetOverride) {
     const r = record(q), status = r.evaluation ? (r.evaluation.correct ? '✓ Correct' : '↻ Review') : 'New';
     const target = targetOverride || (review ? '#practice=wrong&q=' + encodeURIComponent(q.id) : path(route.group || q.groupId, 'practice', q.id));
-    return `<div class="question-row"><a href="${e(target)}"><span class="meta">${e(q.sourceLabel)}${r.bookmark ? ' · Saved' : ''}</span><p>${rich(q.stem.split('\n\n')[0])}</p></a><span class="state-label">${status}</span></div>`;
+    return `<div class="question-row"><a href="${e(target)}"><span class="meta">${e(q.sourceLabel)}${r.bookmark ? ' · Saved' : ''}${r.confused ? ' · Confused' : ''}${q.scored === false ? ' · Unresolved · unscored' : ''}</span><p>${rich(q.stem.split('\n\n')[0])}</p></a><span class="state-label">${status}</span></div>`;
   }
   function emptyQuestions() {
     return '<div class="empty-state"><h2>No questions in this view.</h2><p>Try all sources or clear your progress filters.</p><div class="actions"><button class="pill primary" data-action="clear-filters">Show all questions</button></div></div>';
@@ -156,40 +154,48 @@
     return (q.caveats || []).length ? `<div class="caveat"><strong>Answer / version caveat</strong>${q.caveats.map(textBlock).join('')}</div>` : '';
   }
   function sourceLine(q) {
-    return `<div class="source-line">${isImported(q) ? 'Imported source answer · not individually verified' : 'Authored practice answer'}${q.flags?.includes('version-sensitive') ? ' · version-sensitive' : ''}<br>Reasoning: ${e(q.explanationAuthor || q.provenance?.author || 'Course study workspace')}</div>`;
+    return `<div class="source-line">${q.localRevision ? 'Locally revised · original attribution preserved' : isImported(q) ? 'Imported practice material' : 'Authored practice answer'}${q.flags?.includes('version-sensitive') ? ' · version-sensitive' : ''}<br>Reasoning: ${e(q.explanationAuthor || q.provenance?.author || 'Course study workspace')}</div>`;
   }
   function expectedText(q) {
     if (q.type === 'rows') return q.rows.map(row => row.text + ' → ' + row.options.find(o => o.id === q.correct[row.id]).text).join('\n');
     return q.correct.map(id => q.options.find(o => o.id === id).text).join(q.type === 'ordering' ? '\n→ ' : '\n');
   }
-  function defaultDraft(q) { return q.type === 'rows' ? {} : q.type === 'ordering' ? q.options.map(o => o.id) : []; }
+  function attempt(q) {
+    state.records[q.id] ||= {};
+    const r = record(q), needsSave = !core.validPresentation(q, r.presentation) || r.draft === undefined;
+    core.beginAttempt(q, r);
+    if (needsSave) save();
+    return r;
+  }
+  function defaultDraft(q) { return core.clone(attempt(q).draft); }
+  function choices(q, row) { return core.presentedOptions(q, attempt(q), row); }
   function evaluationVisible(q) {
-    const r = record(q); return !!r.evaluation && core.equal(r.draft, r.evaluation.selected) && sessionFeedback.has(q.id);
+    const r = record(q); return !!r.evaluation && core.equal(r.draft, r.evaluation.selected);
   }
   function questionHtml(q, readOnly = false, revealed = false) {
-    const r = record(q), draft = r.draft || defaultDraft(q);
+    const r = attempt(q), draft = r.draft;
     const show = readOnly ? revealed : evaluationVisible(q);
     let options = '';
     if (q.type === 'rows') {
-      options = q.rows.map((row, i) => `<fieldset class="row-question"><legend>${i + 1}. ${rich(row.text)}</legend>${readOnly ? `<p class="small muted">Choices: ${row.options.map(o => e(o.text)).join(' · ')}</p>` : `<select aria-label="${e(row.text)}" data-question="${e(q.id)}" data-row="${e(row.id)}"><option value="">Choose an answer</option>${row.options.map(o => `<option value="${e(o.id)}"${draft[row.id] === o.id ? ' selected' : ''}>${e(o.text)}</option>`).join('')}</select>`}${show ? `<span class="answer-tag">${!readOnly && draft[row.id] !== q.correct[row.id] ? 'Your selection differs. ' : ''}Answer: ${e(row.options.find(o => o.id === q.correct[row.id]).text)}</span>` : ''}</fieldset>`).join('');
+      options = q.rows.map((row, i) => `<fieldset class="row-question"><legend>${i + 1}. ${rich(row.text)}</legend>${readOnly ? `<p class="small muted">Choices: ${choices(q, row).map(o => e(o.text)).join(' · ')}</p>` : `<select aria-label="${e(row.text)}" data-question="${e(q.id)}" data-row="${e(row.id)}"><option value="">Choose an answer</option>${choices(q, row).map(o => `<option value="${e(o.id)}"${draft[row.id] === o.id ? ' selected' : ''}>${e(o.text)}</option>`).join('')}</select>`}${show ? `<span class="answer-tag">${!readOnly && draft[row.id] !== q.correct[row.id] ? 'Your selection differs. ' : ''}Answer: ${e(row.options.find(o => o.id === q.correct[row.id]).text)}</span>` : ''}</fieldset>`).join('');
     } else if (q.type === 'ordering') {
-      const ordered = readOnly ? (show ? q.correct : q.options.map(o => o.id)) : draft;
+      const ordered = readOnly ? (show ? q.correct : r.presentation.options) : draft;
       options = `<ol class="order-list">${ordered.map((id, i) => `<li><span class="meta">${i + 1}</span><span class="step-text">${rich(q.options.find(o => o.id === id).text)}</span>${readOnly ? '' : `<button class="pill" data-action="move-step" data-id="${e(q.id)}" data-index="${i}" data-dir="-1" aria-label="Move step ${i + 1} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="pill" data-action="move-step" data-id="${e(q.id)}" data-index="${i}" data-dir="1" aria-label="Move step ${i + 1} down"${i === ordered.length - 1 ? ' disabled' : ''}>↓</button>`}</li>`).join('')}</ol>`;
     } else {
-      options = `<div class="options">${q.options.map(o => {
+      options = `<div class="options">${choices(q).map(o => {
         const selected = draft.includes(o.id), expected = q.correct.includes(o.id);
         const className = 'option' + (selected && !readOnly ? ' selected' : '') + (show && expected ? ' expected' : '') + (show && selected && !expected && !readOnly ? ' wrong' : '');
-        return `<${readOnly ? 'div' : 'label'} class="${className}">${readOnly ? '' : `<input type="${q.type === 'multi' ? 'checkbox' : 'radio'}" name="answer-${e(q.id)}" value="${e(o.id)}" data-question="${e(q.id)}"${selected ? ' checked' : ''}>`}<span class="option-letter">${e(o.id)}</span><span class="option-content">${rich(o.text)}${show && expected ? '<span class="answer-tag">✓ Expected answer</span>' : show && selected && !readOnly ? '<span class="answer-tag">Your selection</span>' : ''}</span></${readOnly ? 'div' : 'label'}>`;
+        return `<${readOnly ? 'div' : 'label'} class="${className}">${readOnly ? '' : `<input type="${q.type === 'multi' ? 'checkbox' : 'radio'}" name="answer-${e(q.id)}" value="${e(o.id)}" data-question="${e(q.id)}"${selected ? ' checked' : ''}>`}<span class="option-letter">${e(o.label)}</span><span class="option-content">${rich(o.text)}${show && expected ? '<span class="answer-tag">✓ Expected answer</span>' : show && selected && !readOnly ? '<span class="answer-tag">Your selection</span>' : ''}</span></${readOnly ? 'div' : 'label'}>`;
       }).join('')}</div>`;
     }
     const instruction = q.type === 'multi' ? `Choose ${q.selectCount} answers.` : q.type === 'rows' ? 'Answer every row. Choices may be reused unless the scenario says otherwise.' : q.type === 'ordering' ? 'Move the steps into order, then check the complete sequence.' : 'Choose one answer.';
     const complete = core.validAnswer(q, draft, true);
-    return `<article class="question-card" data-question-card="${e(q.id)}"><div class="question-meta"><span class="meta">${e(q.sourceLabel)}</span><button class="pill small-pill" data-action="bookmark" data-id="${e(q.id)}" aria-pressed="${!!r.bookmark}" aria-label="${r.bookmark ? 'Unsave' : 'Save'} question ${e(q.sourceLabel)}">${r.bookmark ? '✓ Saved' : '+ Save'}</button></div>${contextHtml(q)}<h2>${rich(q.stem)}</h2><p class="question-instruction">${instruction}</p>${q.code ? `<pre class="question-code"><code>${e(q.code)}</code></pre>` : ''}${q.images?.length ? `<div class="question-images">${q.images.map(img => `<a href="${e(img.src)}" target="_blank" rel="noopener" aria-label="Open question exhibit full size"><img src="${e(img.src)}" alt="${e(img.alt || 'Question exhibit')}" loading="lazy"></a>`).join('')}</div>` : ''}${caveatHtml(q)}${options}${readOnly ? '' : `<div class="actions" style="margin-top:24px"><button class="pill primary" data-action="check" data-id="${e(q.id)}"${!complete || show ? ' disabled' : ''}>${show ? 'Answer checked' : 'Check answer'}</button>${show ? `<button class="pill" data-action="retry" data-id="${e(q.id)}">Try again</button>` : ''}</div>`}${q.relatedGroupIds.length ? `<div class="related-links"><span class="meta">Also tests:</span>${q.relatedGroupIds.map(id => `<a href="${e(path(id))}">${e(groups.get(id).title)}</a>`).join('')}</div>` : ''}${readOnly ? '' : `<label class="notes"><span class="small muted">Your note · what changed your decision?</span><textarea data-note="${e(q.id)}" maxlength="10000" placeholder="The key clue was…">${e(r.note || '')}</textarea></label>`}</article>`;
+    return `<article class="question-card" data-question-card="${e(q.id)}"><div class="question-meta"><span class="meta">${e(q.sourceLabel)}</span><button class="pill small-pill" data-action="bookmark" data-id="${e(q.id)}" aria-pressed="${!!r.bookmark}" aria-label="${r.bookmark ? 'Unsave' : 'Save'} question ${e(q.sourceLabel)}">${r.bookmark ? '✓ Saved' : '+ Save'}</button><button class="pill small-pill" data-action="confused" data-id="${e(q.id)}" aria-pressed="${!!r.confused}" aria-label="${r.confused ? 'Remove confusion mark' : 'Mark as confused'}: ${e(q.sourceLabel)}">${r.confused ? 'Confused · clear' : 'Mark as confused'}</button></div>${r.history?.length ? `<details class="attempt-history"><summary class="small muted">${r.history.length} previous attempt records · preserved history</summary>${r.history.map(h => `<p class="small muted">${e(h.evaluation?.at || 'Unchecked draft')} · ${h.evaluation ? `${h.evaluation.earned}/${h.evaluation.possible} points` : 'Saved draft'}${h.contentHash !== q.contentHash ? ' · earlier content; fresh answer required' : ' · earlier attempt'}</p>`).join('')}</details>` : ''}${contextHtml(q)}<h2>${rich(q.stem)}</h2><p class="question-instruction">${instruction}</p>${q.code ? `<pre class="question-code"><code>${e(q.code)}</code></pre>` : ''}${q.images?.length ? `<div class="question-images">${q.images.map(img => `<a href="${e(img.src)}" target="_blank" rel="noopener" aria-label="Open question exhibit full size"><img src="${e(img.src)}" alt="${e(img.alt || 'Question exhibit')}" loading="lazy"></a>`).join('')}</div>` : ''}${q.scored === false ? `<p class="notice" role="status">Unresolved · excluded from scored practice. ${e(q.unresolvedReason)}</p>` : ''}${caveatHtml(q)}${options}${readOnly ? '' : `<div class="actions" style="margin-top:24px"><button class="pill primary" data-action="check" data-id="${e(q.id)}"${!complete || show || q.scored === false ? ' disabled' : ''}>${show ? 'Answer checked' : 'Check answer'}</button>${show ? `<button class="pill" data-action="retry" data-id="${e(q.id)}">Try again</button>` : ''}</div>`}${q.relatedGroupIds.length ? `<div class="related-links"><span class="meta">Also tests:</span>${q.relatedGroupIds.map(id => `<a href="${e(path(id))}">${e(groups.get(id).title)}</a>`).join('')}</div>` : ''}${`<label class="notes"><span class="small muted">Your note · what changed your decision?</span><textarea data-note="${e(q.id)}" maxlength="10000" placeholder="The key clue was…">${e(r.note || '')}</textarea></label>`}</article>`;
   }
   function rowReason(q, row) {
     const rr = q.rowReasoning?.[row.id];
     const why = rr?.why || rr?.[q.correct[row.id]] || '';
-    const alternatives = row.options.map(o => {
+    const alternatives = choices(q, row).map(o => {
       const entry = rr?.alternatives?.[o.id];
       const reason = typeof entry === 'string' ? entry : entry ? entry.why + (entry.whenFits ? ' When it fits: ' + entry.whenFits : '') : rr?.[o.id];
       return reason ? `<div class="option-reason"><strong>${e(o.text)}</strong><p>${rich(reason)}</p></div>` : '';
@@ -200,28 +206,28 @@
     const r = record(q), show = readOnly || evaluationVisible(q), group = groups.get(q.groupId);
     if (!show) return `<aside class="reasoning-panel empty"><p class="eyebrow">Reason before reveal</p><h3>Which clue decides it?</h3><p>Choose your answer first. Then compare the reasoning with the rule you learned.</p><p style="margin-top:16px" class="small muted">${e(group.cue)}</p></aside>`;
     const evaluation = r.evaluation;
-    let details = q.type === 'rows' ? q.rows.map(row => rowReason(q, row)).join('') : q.options.map(o => {
+    let details = q.type === 'rows' ? q.rows.map(row => rowReason(q, row)).join('') : choices(q).map(o => {
       const reason = q.optionReasoning?.[o.id];
-      return reason ? `<div class="option-reason"><strong class="small">${e(o.id)} · ${e(o.text)}</strong><p>${rich(reason)}</p></div>` : '';
+      return reason ? `<div class="option-reason"><strong class="small">${e(o.label)} · ${e(o.text)}</strong><p>${rich(reason)}</p></div>` : '';
     }).join('');
-    return `<aside class="reasoning-panel"><div class="answer-result" role="status">${readOnly ? 'Answer & reasoning' : evaluation.correct ? 'Correct.' : 'A useful distinction.'}</div>${!readOnly ? `<p class="small muted">${evaluation.earned} / ${evaluation.possible} ${evaluation.possible > 1 ? 'rows correct' : 'question points'}</p>` : ''}${sourceLine(q)}<div class="answer-line"><span class="rule-label">Expected ${q.type === 'ordering' ? 'sequence' : 'answer'}</span>${e(expectedText(q))}</div>${q.explanationHtml || textBlock(q.explanation)}${details ? `<details style="margin-top:20px"${!readOnly && q.type !== 'rows' ? ' open' : ''}><summary class="small" style="cursor:pointer;min-height:36px">Reasoning by ${q.type === 'rows' ? 'row' : 'option'}</summary>${details}</details>` : '<p class="small muted" style="margin-top:18px">This source supplies an overall explanation. Use the decision rule below to contrast the remaining choices.</p>'}<div class="rule-card"><span class="rule-label">Decision rule · study guidance</span><p>${e(group.rule)}</p><p style="margin-top:10px">${e(group.contrast)}</p></div><div class="source-links">${(q.references || []).filter(ref => /^(https?:\/\/|guides\/|#)/.test(ref.url)).map(ref => `<a href="${e(ref.url)}"${ref.url.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${e(ref.label || 'Primary documentation')} ↗</a>`).join('')}</div></aside>`;
+    return `<aside class="reasoning-panel"><div class="answer-result" role="status">${readOnly ? 'Answer & reasoning' : evaluation.correct ? 'Correct.' : 'A useful distinction.'}</div>${!readOnly ? `<p class="small muted">${evaluation.earned} / ${evaluation.possible} ${evaluation.possible > 1 ? 'rows correct' : 'question points'}</p>` : ''}${sourceLine(q)}<div class="answer-line"><span class="rule-label">Expected ${q.type === 'ordering' ? 'sequence' : 'answer'}</span>${e(expectedText(q))}</div>${q.explanationHtml || textBlock(q.explanation)}${details ? `<details style="margin-top:20px"${!readOnly && q.type !== 'rows' ? ' open' : ''}><summary class="small" style="cursor:pointer;min-height:36px">Reasoning by ${q.type === 'rows' ? 'row' : 'option'}</summary>${details}</details>` : '<p class="small muted" style="margin-top:18px">This source supplies an overall explanation. Use the decision rule below to contrast the remaining choices.</p>'}<div class="rule-card"><span class="rule-label">Decision rule · study guidance</span><p>${e(q.decisionRule || group.rule)}</p><p style="margin-top:10px">${e(group.contrast)}</p></div><div class="source-links">${(q.references || []).filter(ref => /^(https?:\/\/|guides\/|#)/.test(ref.url)).map(ref => `<a href="${e(ref.url)}"${ref.url.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${e(ref.label || 'Primary documentation')} ↗</a>`).join('')}</div></aside>`;
   }
   function prepareQueue(group, reviewStatus, study) {
-    const key = study ? 'case:' + study.id : reviewStatus ? 'review:' + reviewStatus : group.id + JSON.stringify(state.preferences);
+    const key = study ? 'case:' + study.id : reviewStatus ? 'review:' + reviewStatus + JSON.stringify(state.preferences) : group.id + JSON.stringify(state.preferences);
     if (queueKey !== key || !queue) {
-      queue = study ? core.caseQuestions(bank, study.id).map(q => q.id) : reviewStatus ? core.selectQuestions(bank, state, { status: reviewStatus }).map(q => q.id) : familyQuestions(group).map(q => q.id);
+      queue = study ? core.caseQuestions(bank, study.id).map(q => q.id) : reviewStatus ? core.selectQuestions(bank, state, { status: reviewStatus, source: state.preferences.source, topicId: state.preferences.reviewTopic }).map(q => q.id) : familyQuestions(group).map(q => q.id);
       queueKey = key;
     }
     return queue;
   }
   function renderPractice(group, reviewStatus, study) {
     const ids = prepareQueue(group, reviewStatus, study);
-    if (!ids.length) return reviewStatus ? `<div class="empty-state"><h2>Nothing to review yet.</h2><p>Practice a topic first. Incorrect answers will appear here, kept in topic order.</p><div class="actions">${pill('#home', 'Choose a topic', true)}</div></div>` : filters() + emptyQuestions();
+    if (!ids.length) return reviewStatus ? reviewFilters() + `<div class="empty-state"><h2>${reviewStatus === 'confused' ? 'No confused questions in this view.' : 'Nothing to review yet.'}</h2><p>Marked questions stay here until you clear them. Try another source or topic.</p><div class="actions">${pill('#home', 'Choose a topic', true)}</div></div>` : filters() + emptyQuestions();
     let id = route.q && ids.includes(route.q) ? route.q : group && ids.includes(state.positions[group.id]) ? state.positions[group.id] : ids[0];
     const q = questions.get(id), index = ids.indexOf(id), qgroup = groups.get(q.groupId), topic = topics.get(q.topicId);
     state.positions[group?.id || qgroup.id] = id; state.lastGroup = group?.id || qgroup.id; save();
     const jump = target => study ? casePath(study.id, 'practice', target) : reviewStatus ? '#practice=' + reviewStatus + '&q=' + encodeURIComponent(target) : path(group.id, 'practice', target);
-    return `${reviewStatus ? crumbs(topic, qgroup) + `<div class="page-title"><p class="eyebrow">Review · topics kept together</p><h1>${e(qgroup.title)}</h1><p>Try the missed decision again. Related questions stay nearby.</p></div>` : study ? '' : filters()}<div class="practice-top"><span class="meta">${index + 1} / ${ids.length} · ${study ? 'Case-study task' : e(qgroup.title)}</span><label class="field">Jump to question<select id="question-jump">${ids.map((qid, i) => `<option value="${e(jump(qid))}"${qid === id ? ' selected' : ''}>${i + 1} · ${e(questions.get(qid).sourceLabel)}</option>`).join('')}</select></label></div><div class="question-progress" aria-hidden="true"><span style="width:${100 * (index + 1) / ids.length}%"></span></div><div class="practice-layout">${questionHtml(q)}${reasoningHtml(q)}</div><div class="practice-bottom"><a href="${e(path(qgroup.id, 'compare', q.id))}">Compare within this family ↗</a><div class="actions">${index > 0 ? pill(jump(ids[index - 1]), '← Previous') : '<span></span>'}${index < ids.length - 1 ? pill(jump(ids[index + 1]), 'Next question →', true) : pill(study ? casePath(study.id) : reviewStatus ? '#review' : '#topic=' + group.topicId, study ? 'Finish case study' : 'Finish this family', true)}</div></div>${index === ids.length - 1 && !reviewStatus && !study ? `<div class="notice">Family complete? If you can explain the distinction without looking, mark it learned above. You can repeat missed questions through the “Needs review” filter.</div>` : ''}`;
+    return `${reviewStatus ? crumbs(topic, qgroup) + `<div class="page-title"><p class="eyebrow">Review · topics kept together</p><h1>${e(qgroup.title)}</h1><p>${e(statusNames[reviewStatus])} · Clear a confusion mark whenever the distinction makes sense.</p></div>` + reviewFilters() : study ? '' : filters()}<div class="practice-top"><span class="meta">${index + 1} / ${ids.length} · ${study ? 'Case-study task' : e(qgroup.title)}</span><label class="field">Jump to question<select id="question-jump">${ids.map((qid, i) => `<option value="${e(jump(qid))}"${qid === id ? ' selected' : ''}>${i + 1} · ${e(questions.get(qid).sourceLabel)}</option>`).join('')}</select></label></div><div class="question-progress" aria-hidden="true"><span style="width:${100 * (index + 1) / ids.length}%"></span></div><div class="practice-layout">${questionHtml(q)}${reasoningHtml(q)}</div><div class="practice-bottom"><a href="${e(path(qgroup.id, 'compare', q.id))}">Compare within this family ↗</a><div class="actions">${index > 0 ? pill(jump(ids[index - 1]), '← Previous') : '<span></span>'}${index < ids.length - 1 ? pill(jump(ids[index + 1]), 'Next question →', true) : pill(study ? casePath(study.id) : reviewStatus ? '#review' : '#topic=' + group.topicId, study ? 'Finish case study' : 'Finish this family', true)}</div></div>${index === ids.length - 1 && !reviewStatus && !study ? `<div class="notice">Family complete? If you can explain the distinction without looking, mark it learned above. You can repeat missed questions through the “Needs review” filter.</div>` : ''}`;
   }
   function renderCompare(group) {
     const qs = familyQuestions(group);
@@ -241,14 +247,19 @@
     state.lastGroup = group.id; save();
     return `${crumbs(topic, group)}${detailHero(`Decision family · ${group.questionIds.length} questions`, group.title, group.cue, `<button class="pill${learned ? ' primary' : ''}" data-action="learned" data-group="${e(group.id)}" aria-pressed="${learned}">${learned ? '✓ I can explain this' : 'Mark as learned'}</button>` + (topic.guide ? pill('guides/' + topic.guide.replace('.md', '.html'), 'Read full summary') : ''))}<nav class="tabs" aria-label="Study modes">${['learn', 'compare', 'practice'].map(mode => `<a class="pill tab${route.mode === mode ? ' active' : ''}" href="${e(path(group.id, mode, mode === 'practice' ? route.q : undefined))}"${route.mode === mode ? ' aria-current="page"' : ''}>${mode === 'learn' ? 'Learn the rule' : mode === 'compare' ? 'Compare variants' : 'Practice'}</a>`).join('')}</nav>${route.mode === 'practice' ? renderPractice(group) : route.mode === 'compare' ? renderCompare(group) : renderLearn(group)}`;
   }
+  function reviewFilters() {
+    return `<div class="filter-bar"><label class="field">Question source<select id="source-filter"><option value="all">All sources</option>${Object.entries(sourceNames).map(([key, value]) => `<option value="${key}"${state.preferences.source === key ? ' selected' : ''}>${value}</option>`).join('')}</select></label><label class="field">Topic<select id="review-topic-filter"><option value="all">All topics</option>${bank.topics.map(t => `<option value="${e(t.id)}"${state.preferences.reviewTopic === t.id ? ' selected' : ''}>${e(t.title)}</option>`).join('')}</select></label></div>`;
+  }
   function renderReview() {
-    const missed = core.selectQuestions(bank, state, { status: 'wrong' }), saved = core.selectQuestions(bank, state, { status: 'bookmarked' });
-    const ordered = bank.groups.filter(g => missed.some(q => q.groupId === g.id));
-    return `${crumbs()}<div class="page-title"><p class="eyebrow">Your next useful repetition</p><h1>Return to the distinction.</h1><p>Missed questions stay together by topic and family. Check the rule again, then answer without looking.</p></div><div class="dashboard"><div class="metric"><strong>${missed.length}</strong><p>Questions to retry</p></div><div class="metric"><strong>${ordered.length}</strong><p>Decision families to revisit</p></div><div class="metric"><strong>${saved.length}</strong><p>Saved questions</p></div></div><div class="actions">${missed.length ? pill('#practice=wrong', 'Retry missed questions', true) : ''}${saved.length ? pill('#practice=bookmarked', 'Practice saved questions') : ''}${pill('#home', 'All topics')}</div>${missed.length ? `<div class="family-list" style="margin-top:32px">${ordered.map((g, i) => `<div>${familyRow(g, i)}<div style="padding-left:55px">${missed.filter(q => q.groupId === g.id).map(q => questionRow(q, true)).join('')}</div></div>`).join('')}</div>` : '<div class="empty-state"><h2>A clean page.</h2><p>Your latest checked answers have no unresolved mistakes. Unanswered questions are still available in every topic.</p></div>'}`;
+    const options = { source: state.preferences.source, topicId: state.preferences.reviewTopic };
+    const missed = core.selectQuestions(bank, state, { ...options, status: 'wrong' }), saved = core.selectQuestions(bank, state, { ...options, status: 'bookmarked' }), confused = core.selectQuestions(bank, state, { ...options, status: 'confused' });
+    const marked = [...new Map([...confused, ...missed].map(q => [q.id, q])).values()];
+    const ordered = bank.groups.filter(g => marked.some(q => q.groupId === g.id));
+    return `${crumbs()}${detailHero('Your next useful repetition', 'Return to the distinction.', 'Confusion is independent of your score. Mark guesses or unclear answers, then revisit them until you understand.')}<div class="dashboard"><div class="metric"><strong>${confused.length}</strong><p>Confused questions</p></div><div class="metric"><strong>${missed.length}</strong><p>Questions to retry</p></div><div class="metric"><strong>${saved.length}</strong><p>Saved questions</p></div></div>${reviewFilters()}<div class="actions">${pill('#practice=confused', 'Review confused questions', true)}${missed.length ? pill('#practice=wrong', 'Retry missed questions') : ''}${saved.length ? pill('#practice=bookmarked', 'Practice saved questions') : ''}${pill('#home', 'All topics')}</div>${marked.length ? `<div class="family-list" style="margin-top:32px">${ordered.map((g, i) => `<div>${familyRow(g, i)}<div class="review-question-list">${marked.filter(q => q.groupId === g.id).map(q => questionRow(q, true, '#practice=' + (record(q).confused ? 'confused' : 'wrong') + '&q=' + encodeURIComponent(q.id))).join('')}</div></div>`).join('')}</div>` : '<div class="empty-state"><h2>A clean page.</h2><p>No confused or missed questions in this view. Mark a question while studying, even when your answer is correct.</p></div>'}`;
   }
   function renderProgress() {
     const s = stats(bank.questions.map(q => q.id));
-    return `${crumbs()}<div class="page-title"><p class="eyebrow">Your notebook, on this device</p><h1>See what is taking shape.</h1><p>Question results and your own “I can explain this” checks measure different things. Use both to decide what to revisit.</p></div><div class="dashboard"><div class="metric"><strong>${s.checked}<span class="small"> / ${s.total}</span></strong><p>Questions checked at least once</p></div><div class="metric"><strong>${state.learnedGroupIds.length}<span class="small"> / ${bank.groups.length}</span></strong><p>Families you can explain</p></div><div class="metric"><strong>${s.wrong}</strong><p>Latest answers needing review</p></div></div><div class="topic-list">${bank.topics.map(topicRow).join('')}</div><p class="notice">Practice results are raw points, not Microsoft's scaled exam score or a pass prediction. Progress is stored separately in each browser/device.</p><div class="backup-box"><h2>Take your notebook with you.</h2><p>Export a JSON backup, then import it on your other device. Imports merge progress and notes; shared attempt counts are not added twice. Nothing syncs to an account.</p><div class="actions"><button class="pill primary" data-action="export">Export backup</button><button class="pill" data-action="import">Import & merge</button><a class="pill" href="GROUPED-QUESTION-MAP.md">Full grouped question map</a></div>${importMessage ? `<p role="status" style="margin-top:16px">${e(importMessage)}</p>` : ''}</div>${storageError ? `<div class="notice">${e(storageError)}<div class="actions" style="margin-top:12px"><button class="pill" data-action="export-existing">Download existing saved data</button><button class="pill" data-action="recover-storage">Use current notebook for future saves</button></div></div>` : ''}`;
+    return `${crumbs()}<div class="page-title"><p class="eyebrow">Your notebook, on this device</p><h1>See what is taking shape.</h1><p>Question results and your own “I can explain this” checks measure different things. Use both to decide what to revisit.</p></div><div class="dashboard"><div class="metric"><strong>${s.checked}<span class="small"> / ${s.total}</span></strong><p>Questions checked at least once</p></div><div class="metric"><strong>${state.learnedGroupIds.length}<span class="small"> / ${bank.groups.length}</span></strong><p>Families you can explain</p></div><div class="metric"><strong>${s.wrong}</strong><p>Latest answers needing review · ${s.confused} confused</p></div></div><div class="topic-list">${bank.topics.map(topicRow).join('')}</div><p class="notice">${Object.keys(state.retiredRecords).length} retired/unknown records preserved in your backup. ${Object.values(state.records).reduce((n, r) => n + (r.history?.length || 0), 0)} historical attempt records retained. Revised content requires a fresh answer. Practice results are raw points, not Microsoft's scaled exam score or a pass prediction. Progress is stored separately in each browser/device.</p><details class="backup-box"><summary>${bank.questions.filter(q => q.scored === false).length} unresolved questions · excluded from scoring</summary>${bank.questions.filter(q => q.scored === false).map(q => `<section class="question-row"><div><span class="meta">${e(q.sourceLabel)} · ${e(q.id)}</span><p>${rich(q.stem)}</p><p class="notice">${e(q.unresolvedReason)}</p><div class="source-links">${q.references.filter(ref => ref.url.startsWith('https://')).map(ref => `<a href="${e(ref.url)}" target="_blank" rel="noopener">${e(ref.label)} ↗</a>`).join('')}</div><label class="notes"><span class="small muted">Preserved note</span><textarea data-note="${e(q.id)}" maxlength="10000">${e(record(q).note || '')}</textarea></label></div></section>`).join('')}</details><div class="backup-box"><h2>Take your notebook with you.</h2><p>Export a JSON backup, then import it on your other device. Imports merge progress and notes; shared attempt counts are not added twice. Nothing syncs to an account.</p><div class="actions"><button class="pill primary" data-action="export">Export backup</button><button class="pill" data-action="import">Import & merge</button><a class="pill" href="GROUPED-QUESTION-MAP.md">Full grouped question map</a></div>${importMessage ? `<p role="status" style="margin-top:16px">${e(importMessage)}</p>` : ''}</div>${storageError ? `<div class="notice">${e(storageError)}<div class="actions" style="margin-top:12px"><button class="pill" data-action="export-existing">Download existing saved data</button><button class="pill" data-action="recover-storage">Use current notebook for future saves</button></div></div>` : ''}`;
   }
   function render(keepScroll = false) {
     const y = window.scrollY;
@@ -269,13 +280,13 @@
     else { window.scrollTo({ top: 0, behavior: 'instant' }); main.focus({ preventScroll: true }); }
   }
   function updateDraft(q, draft, focus) {
-    state.records[q.id] ||= {}; state.records[q.id].draft = draft; sessionFeedback.delete(q.id); save(); render(true);
+    state.records[q.id] ||= {}; state.records[q.id].draft = draft; state.records[q.id].draftAt = new Date().toISOString(); sessionFeedback.delete(q.id); save(); render(true);
     if (focus) main.querySelector(focus)?.focus({ preventScroll: true });
   }
   main.addEventListener('change', event => {
     const el = event.target;
-    if (el.id === 'source-filter' || el.id === 'status-filter' || el.id === 'related-filter') {
-      state.preferences[el.id === 'source-filter' ? 'source' : el.id === 'status-filter' ? 'status' : 'related'] = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.id === 'source-filter' || el.id === 'status-filter' || el.id === 'related-filter' || el.id === 'review-topic-filter') {
+      state.preferences[el.id === 'source-filter' ? 'source' : el.id === 'status-filter' ? 'status' : el.id === 'review-topic-filter' ? 'reviewTopic' : 'related'] = el.type === 'checkbox' ? el.checked : el.value;
       queue = null; compareIds = []; compareRevealed = false; expandedList = false; save(); render(true); document.getElementById(el.id)?.focus({ preventScroll: true }); return;
     }
     if (el.id === 'question-jump') { location.hash = el.value; return; }
@@ -312,15 +323,29 @@
       const draft = record(q).draft || defaultDraft(q);
       try {
         const result = core.grade(q, draft); state.records[q.id] ||= {}; const r = state.records[q.id];
+        if (r.evaluation) { r.history ||= []; r.history.push(core.snapshot(q, r)); }
         r.draft = core.clone(draft); r.evaluation = result; r.attempts = (r.attempts || 0) + 1;
         const key = result.correct ? 'correctCount' : 'wrongCount'; r[key] = (r[key] || 0) + 1;
         sessionFeedback.add(q.id); save(); render(true);
         main.querySelector('.reasoning-panel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       } catch (error) { toast(error.message); }
-    } else if (action === 'retry') { updateDraft(q, defaultDraft(q)); }
+    } else if (action === 'retry') {
+      const r = attempt(q); if (r.evaluation) { r.history ||= []; r.history.push(core.snapshot(q, r)); }
+      delete r.evaluation; core.beginAttempt(q, r, true); sessionFeedback.delete(q.id); save(); render(true);
+    } else if (action === 'confused') {
+      const r = record(q); state.records[q.id] ||= {}; core.toggleConfused(state.records[q.id]);
+      const reviewingConfusion = route.kind === 'review-practice' && route.status === 'confused' || route.kind === 'group' && state.preferences.status === 'confused';
+      if (!r.confused && reviewingConfusion && queue) {
+        const index = queue.indexOf(q.id); queue = queue.filter(id => record(questions.get(id)).confused);
+        const next = queue[Math.min(Math.max(index, 0), queue.length - 1)];
+        if (next) { route.q = next; history.replaceState(null, '', route.kind === 'review-practice' ? '#practice=confused&q=' + encodeURIComponent(next) : path(route.group, 'practice', next)); }
+      }
+      save(); render(true);
+      (main.querySelector(`[data-action="confused"][data-id="${q.id}"]`) || main.querySelector('[data-action="confused"]') || main.querySelector('.empty-state a'))?.focus({ preventScroll: true });
+    }
     else if (action === 'bookmark') { state.records[q.id] ||= {}; state.records[q.id].bookmark = !record(q).bookmark; save(); render(true); }
     else if (action === 'learned') { const id = el.dataset.group; state.learnedGroupIds = state.learnedGroupIds.includes(id) ? state.learnedGroupIds.filter(g => g !== id) : [...state.learnedGroupIds, id]; save(); render(true); }
-    else if (action === 'clear-filters') { state.preferences = { source: 'all', status: 'all', related: false }; queue = null; compareIds = []; save(); render(true); }
+    else if (action === 'clear-filters') { state.preferences = { source: 'all', status: 'all', related: false, reviewTopic: 'all' }; queue = null; compareIds = []; save(); render(true); }
     else if (action === 'show-all') { expandedList = true; render(true); }
     else if (action === 'reveal-compare') { compareRevealed = !compareRevealed; render(true); }
     else if (action === 'move-step') {
@@ -335,14 +360,14 @@
   document.getElementById('backup-file').addEventListener('change', async event => {
     const file = event.target.files[0]; if (!file) return;
     try {
-      if (file.size > 5000000) throw Error('Backup is too large.');
+      if (file.size > 25000000) throw Error('Backup is too large.');
       const imported = core.validateBackup(JSON.parse(await file.text()), bank);
-      state = core.mergeStates(state, imported, bank); save(); importMessage = 'Backup merged. Newer checked answers retained; notes and saved questions preserved.'; render(true); toast(importMessage);
+      state = core.mergeStates(state, imported, bank); save(); importMessage = `Backup merged. Notes, bookmarks and confusion changes preserved; revised answers retained as history. ${Object.keys(state.retiredRecords).length} retired/unknown records kept.`; render(true); toast(importMessage);
     } catch (error) { importMessage = 'Import failed: ' + error.message; render(true); toast(importMessage); }
     event.target.value = '';
   });
   window.addEventListener('hashchange', () => { compareIds = []; compareRevealed = false; expandedList = false; render(); });
-  render();
+  save(); render();
   if (storageError) { document.getElementById('save-status').textContent = 'Storage issue · open Progress'; toast('Existing progress could not load. Open Progress to recover it.'); }
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* Online use remains available. */ });

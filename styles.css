@@ -30,3 +30,19 @@ body{position:relative;isolation:isolate}body::before{content:"";position:absolu
 @media(max-width:900px){:root{--frame-margin:20px;--frame-gutter:28px}.detail-hero{grid-template-columns:minmax(0,1fr) 150px;gap:24px;padding:28px}.detail-art .orbit{width:150px;height:150px}.detail-art .sphere{width:112px;height:112px}}
 @media(max-width:600px){:root{--frame-margin:12px;--frame-gutter:20px}.frame-line{margin-block:28px}.frame-boundary{margin-block:0}.detail-hero{grid-template-columns:minmax(0,1fr);padding:24px;gap:0}.detail-art{display:none}.detail-hero h1{font-size:32px;line-height:1.15}.detail-hero .detail-copy>.eyebrow{font-size:10px}.hero{padding-bottom:28px}}
 @media print{body::before,.frame-line,.detail-art{display:none}.detail-hero{display:block;background:none;padding:0}.site-header,main,.site-footer{width:100%}}
+
+/* Notebook flags use the existing quiet, monochrome action hierarchy. */
+.question-meta { flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+.question-meta > .meta { flex: 1 1 160px; }
+.question-meta button[aria-pressed="true"] { background: var(--color-stone, #ebe8e4); border-color: #777169; }
+.attempt-history { margin: 16px 0; padding: 12px 0; border-block: 1px solid #ebe8e4; }
+.attempt-history summary { cursor: pointer; min-height: 32px; }
+.attempt-history p { margin: 8px 0; }
+.review-question-list { padding: 0 24px 24px; }
+.review-question-list .question-row { border-bottom: 1px solid #ebe8e4; }
+@media (max-width: 600px) {
+  .question-meta > .meta { flex-basis: 100%; }
+  .question-meta .pill { min-height: 44px; }
+  .review-question-list { padding: 0 0 24px; }
+}
+.option.expected { border-width: 1px; }

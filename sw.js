@@ -1,18 +1,18 @@
-/* Offline on localhost/HTTPS; relative scope also works under GitHub Pages. */
+/* Install a complete version together; never mix cached code and question data. */
 const CACHE_PREFIX = 'ai103-topic-lab-';
-const CACHE = CACHE_PREFIX + '2026-10-06-v3';
-const shell = ['.','index.html','styles.css','core.js','app.js','data/bank.js','manifest.webmanifest','assets/icon.svg','assets/paper-grain.svg','assets/color-grain.svg','assets/inter-latin.woff2','README.md','GROUPED-QUESTION-MAP.md','THIRD_PARTY_NOTICES.txt'];
+const CACHE = CACHE_PREFIX + '2026-10-07-v6';
+const shell = ['.','index.html','styles.css','core.js','app.js','data/bank.js','data/bank.json','data/question-audit.json','manifest.webmanifest','assets/icon.svg','assets/paper-grain.svg','assets/color-grain.svg','assets/inter-latin.woff2','README.md','GROUPED-QUESTION-MAP.md','CONTENT-REVIEW.md','THIRD_PARTY_NOTICES.txt'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    await cache.addAll(shell);
-    const response = await fetch('data/bank.json');
-    if (!response.ok) throw Error('Offline study bank unavailable');
-    await cache.put('data/bank.json', response.clone());
+    // Bypass HTTP caches while preparing the next compatible application bundle.
+    await cache.addAll(shell.map(url => new Request(url, { cache: 'reload' })));
+    const response = await cache.match('data/bank.json');
     const bank = await response.json();
     const media = [...new Set(bank.questions.flatMap(q => (q.images || []).map(img => img.src)))];
     const guides = bank.topics.filter(t => t.guide).map(t => 'guides/' + t.guide.replace('.md','.html'));
-    await cache.addAll([...media, ...guides]);
+    await cache.addAll([...media, ...guides].map(url => new Request(url, { cache: 'reload' })));
+    // No skipWaiting: an open old app finishes with its existing bundle.
   })());
 });
 self.addEventListener('activate', event => {
@@ -26,13 +26,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
-    try {
-      const response = await fetch(request);
-      if (response.ok) await cache.put(request, response.clone());
-      return response;
-    } catch (_) {
-      const cached = await cache.match(request);
-      if (cached) return cached;
+    const cached = await cache.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    try { return await fetch(request); }
+    catch (_) {
       if (request.mode === 'navigate') return cache.match('index.html');
       return new Response('Unavailable offline', { status: 503 });
     }
