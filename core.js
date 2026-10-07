@@ -74,7 +74,7 @@
     // Explicit false is a tombstone. Older/missing information cannot resurrect it.
     record.confusedAt = new Date(Math.max(Date.parse(at), (Date.parse(record.confusedAt || '') || 0) + 1)).toISOString(); return record.confused;
   }
-  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, topicPositions: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
+  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, topicPositions: {}, topicOrders: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
   function definition(bank, q, hash) {
     return q.contentHash === hash ? q : (bank.contentHistory || []).find(old => old.id === q.id && old.contentHash === hash);
   }
@@ -177,6 +177,13 @@
       if (!bank.topics.some(t => t.id === topic) || typeof id !== 'string' || byId.has(id) && byId.get(id).topicId !== topic) throw Error('Invalid topic position.');
       if (byId.has(id)) safe.topicPositions[topic] = id;
     }
+    // Older notebooks have no mixed sequence. Answers are stored separately by ID.
+    const topicOrders = value.topicOrders === undefined ? {} : value.topicOrders;
+    if (!object(topicOrders)) throw Error('Invalid topic orders.');
+    for (const [topic, ids] of Object.entries(topicOrders)) {
+      if (!bank.topics.some(t => t.id === topic) || !Array.isArray(ids) || ids.length > 10000 || new Set(ids).size !== ids.length || ids.some(id => !safeId(id) || byId.has(id) && byId.get(id).topicId !== topic)) throw Error('Invalid topic order.');
+      safe.topicOrders[topic] = ids.filter(id => byId.has(id) && byId.get(id).scored !== false);
+    }
     const p = value.preferences;
     if (!object(p) || !sources.includes(p.source) || !statuses.includes(p.status) || typeof p.related !== 'boolean') throw Error('Invalid filters.');
     if (p.reviewTopic !== undefined && p.reviewTopic !== 'all' && !bank.topics.some(t => t.id === p.reviewTopic)) throw Error('Invalid review topic.');
@@ -212,6 +219,7 @@
     for (const field of ['records', 'retiredRecords']) for (const [id, incoming] of Object.entries(b[field])) a[field][id] = mergeRecord(a[field][id], incoming);
     a.learnedGroupIds = [...new Set([...a.learnedGroupIds, ...b.learnedGroupIds])]; a.positions = { ...b.positions, ...a.positions };
     a.topicPositions = { ...b.topicPositions, ...a.topicPositions };
+    a.topicOrders = { ...b.topicOrders, ...a.topicOrders };
     return validateBackup(a, bank);
   }
   function matchesStatus(q, record, status) {
@@ -231,6 +239,21 @@
     return bank.questions.filter(q => q.caseId === caseId && (includeUnresolved || q.scored !== false)).sort((a, b) =>
       (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER) || String(a.sourceQuestionId || a.id).localeCompare(String(b.sourceQuestionId || b.id), undefined, { numeric: true }));
   }
-  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus };
+  function beginTopicOrder(bank, state, topicId, fresh = false, random = Math.random) {
+    if (!bank.topics.some(t => t.id === topicId)) throw Error('Unknown topic.');
+    const ids = selectQuestions(bank, state, { topicId }).map(q => q.id), eligible = new Set(ids);
+    state.topicOrders ||= {};
+    // Keep the saved sequence; newly added questions join its end. Filters never reshuffle it.
+    const saved = fresh ? [] : (state.topicOrders[topicId] || []).filter(id => eligible.has(id));
+    const seen = new Set(saved);
+    state.topicOrders[topicId] = [...saved, ...shuffle(ids.filter(id => !seen.has(id)), random)];
+    return state.topicOrders[topicId];
+  }
+  function topicQuestions(bank, state, topicId, { source = 'all', status = 'all' } = {}, random = Math.random) {
+    const order = beginTopicOrder(bank, state, topicId, false, random);
+    const selected = new Map(selectQuestions(bank, state, { topicId, source, status }).map(q => [q.id, q]));
+    return order.filter(id => selected.has(id)).map(id => selected.get(id));
+  }
+  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus, beginTopicOrder, topicQuestions };
   if (typeof module !== 'undefined') module.exports = root.TopicCore;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

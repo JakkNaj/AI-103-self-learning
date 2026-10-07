@@ -276,16 +276,24 @@ assert.match(findQ('WEB-sefstratiou-143-dfb11805').code, /time.sleep\(delay\)/);
 assert(findQ('WEB-examtopics-20-c7e10c9f').rows[0].options.find(o => o.id === findQ('WEB-examtopics-20-c7e10c9f').correct.r1).text.toLowerCase().includes('retrieval'));
 assert.match(findQ('WEB-examtopics-27-0ad71346').stem, /support|supported/i);
 assert.match(JSON.stringify(roleQ.rowReasoning), /provést může/);
-// Whole-topic queues contain every scored primary question once, in family order.
+// The base selector retains family order. Mixed topic practice persists a separate permutation.
 const topicState = core.freshState(bank);
+const seeded = initial => { let n = initial; return () => { n = (1664525 * n + 1013904223) >>> 0; return n / 4294967296; }; };
+const noRandom = () => { throw Error('An existing topic order must not reshuffle.'); };
 for (const topic of bank.topics) {
   const expected = topic.groupIds.flatMap(id => bank.groups.find(g => g.id === id).questionIds)
     .filter(id => bank.questions.find(q => q.id === id).scored !== false);
   const qs = core.selectQuestions(bank, topicState, { topicId: topic.id });
   assert.deepEqual(qs.map(q => q.id), [...new Set(expected)], 'whole topic: ' + topic.id);
   assert(qs.every(q => q.topicId === topic.id));
+  const mixed = core.topicQuestions(bank, topicState, topic.id, {}, seeded(103));
+  const order = core.shuffle(qs.map(q => q.id), seeded(103));
+  assert.deepEqual(mixed.map(q => q.id), order);
+  assert.deepEqual([...order].sort(), qs.map(q => q.id).sort());
+  assert.deepEqual(core.topicQuestions(bank, topicState, topic.id, {}, noRandom).map(q => q.id), order);
   for (const source of Object.keys(bank.sourceCounts)) {
     assert.deepEqual(core.selectQuestions(bank, topicState, { topicId: topic.id, source }).map(q => q.id), qs.filter(q => q.sourceId === source).map(q => q.id));
+    assert.deepEqual(core.topicQuestions(bank, topicState, topic.id, { source }, noRandom).map(q => q.id), mixed.filter(q => q.sourceId === source).map(q => q.id));
   }
 }
 const agentQuestions = core.selectQuestions(bank, topicState, { topicId: '01' });
@@ -299,23 +307,50 @@ assert.deepEqual(core.selectQuestions(bank, topicState, { topicId: '01', status:
 const resumedTopic = core.validateBackup(core.clone(topicState), bank);
 assert.equal(resumedTopic.topicPositions['01'], agentQ.id);
 assert.deepEqual(resumedTopic.records[agentQ.id].presentation, topicRecord.presentation);
-const oldTopicBackup = core.clone(topicState); delete oldTopicBackup.topicPositions;
+assert.deepEqual(resumedTopic.topicOrders, topicState.topicOrders);
+assert.deepEqual(core.topicQuestions(bank, resumedTopic, '01', { status: 'confused' }, noRandom).map(q => q.id), [agentQ.id]);
+const oldTopicBackup = core.clone(topicState); delete oldTopicBackup.topicPositions; delete oldTopicBackup.topicOrders;
 const migratedTopic = core.validateBackup(oldTopicBackup, bank);
 assert.deepEqual(migratedTopic.topicPositions, {});
+assert.deepEqual(migratedTopic.topicOrders, {});
 assert.equal(migratedTopic.records[agentQ.id].note, 'Topic notebook');
 assert(migratedTopic.records[agentQ.id].bookmark && migratedTopic.records[agentQ.id].confused && migratedTopic.records[agentQ.id].evaluation.correct);
 assert.equal(core.mergeStates(topicState, migratedTopic, bank).topicPositions['01'], agentQ.id);
+assert.deepEqual(core.mergeStates(topicState, migratedTopic, bank).topicOrders, topicState.topicOrders);
+assert.deepEqual(core.mergeStates(migratedTopic, topicState, bank).topicOrders, topicState.topicOrders);
 const incomingTopic = core.freshState(bank);
+core.beginTopicOrder(bank, incomingTopic, '01', true, seeded(9));
 incomingTopic.topicPositions['01'] = agentQuestions[1].id;
 const roleTopicQ = core.selectQuestions(bank, incomingTopic, { topicId: '08' })[0];
 incomingTopic.topicPositions['08'] = roleTopicQ.id;
 const combinedTopics = core.mergeStates(topicState, incomingTopic, bank);
 assert.equal(combinedTopics.topicPositions['01'], agentQ.id);
 assert.equal(combinedTopics.topicPositions['08'], roleTopicQ.id);
+assert.deepEqual(combinedTopics.topicOrders['01'], topicState.topicOrders['01'], 'Local topic order wins on import');
 for (const positions of [null, [], { unknown: agentQ.id }, { '08': agentQ.id }]) {
   const bad = core.clone(topicState); bad.topicPositions = positions;
   assert.throws(() => core.validateBackup(bad, bank), /topic position/);
 }
+for (const orders of [null, [], { unknown: [] }, { '01': [roleTopicQ.id] }, { '01': [agentQ.id, agentQ.id] }, { '01': ['__proto__'] }, { '01': [null] }]) {
+  const bad = core.clone(topicState); bad.topicOrders = orders;
+  assert.throws(() => core.validateBackup(bad, bank), /topic order/);
+}
+const retiredOrder = core.clone(topicState);
+retiredOrder.topicOrders['01'].push('retired-question');
+retiredOrder.records['retired-question'] = { note: 'Retired notebook', bookmark: true };
+const keptRetired = core.validateBackup(retiredOrder, bank);
+assert(!keptRetired.topicOrders['01'].includes('retired-question'));
+assert.equal(keptRetired.retiredRecords['retired-question'].note, 'Retired notebook');
+const beforeMix = core.clone(topicState), previousOrder = [...topicState.topicOrders['01']];
+const nextOrder = core.beginTopicOrder(bank, topicState, '01', true, seeded(9));
+assert.notDeepEqual(nextOrder, previousOrder, 'Different controlled permutations should change the question sequence');
+assert.deepEqual(topicState.records, beforeMix.records, 'Mixing must preserve all grades, drafts, flags and option presentations');
+assert.deepEqual(topicState.topicPositions, beforeMix.topicPositions);
+assert.deepEqual(core.topicQuestions(bank, core.validateBackup(topicState, bank), '01', {}, noRandom).map(q => q.id), nextOrder);
+const expandedBank = core.clone(bank), added = { ...core.clone(agentQ), id: 'new-topic-question' };
+expandedBank.questions.push(added); expandedBank.groups.find(g => g.id === added.groupId).questionIds.push(added.id);
+assert.deepEqual(core.beginTopicOrder(expandedBank, topicState, '01', false, seeded(4)), [...nextOrder, added.id], 'New questions append without rearranging the existing sequence');
+assert.deepEqual(core.beginTopicOrder(bank, topicState, '01', false, noRandom), nextOrder, 'Retired questions leave the sequence without changing remaining order');
 require('./tests/service-worker.js')().then(() => {
-  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 whole-topic queues/filters/resume/legacy backups; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
+  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 mixed topic queues/filters/resume/legacy backups, explicit reshuffle and added/retired items; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
 }).catch(error => { console.error(error); process.exitCode = 1; });
