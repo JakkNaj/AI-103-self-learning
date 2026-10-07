@@ -1,6 +1,6 @@
 /* Install a complete version together; never mix cached code and question data. */
 const CACHE_PREFIX = 'ai103-topic-lab-';
-const CACHE = CACHE_PREFIX + '2026-10-07-v6';
+const CACHE = CACHE_PREFIX + '2026-10-07-v7';
 const shell = ['.','index.html','styles.css','core.js','app.js','data/bank.js','data/bank.json','data/question-audit.json','manifest.webmanifest','assets/icon.svg','assets/paper-grain.svg','assets/color-grain.svg','assets/inter-latin.woff2','README.md','GROUPED-QUESTION-MAP.md','CONTENT-REVIEW.md','THIRD_PARTY_NOTICES.txt'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
@@ -12,7 +12,9 @@ self.addEventListener('install', event => {
     const media = [...new Set(bank.questions.flatMap(q => (q.images || []).map(img => img.src)))];
     const guides = bank.topics.filter(t => t.guide).map(t => 'guides/' + t.guide.replace('.md','.html'));
     await cache.addAll([...media, ...guides].map(url => new Request(url, { cache: 'reload' })));
-    // No skipWaiting: an open old app finishes with its existing bundle.
+    // The complete bundle is ready. UI-only release; bank and storage schema unchanged.
+    // Activate even when another app tab is open, so reload cannot remain on old shuffling code.
+    await self.skipWaiting();
   })());
 });
 self.addEventListener('activate', event => {

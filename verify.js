@@ -276,4 +276,6 @@ assert.match(findQ('WEB-sefstratiou-143-dfb11805').code, /time.sleep\(delay\)/);
 assert(findQ('WEB-examtopics-20-c7e10c9f').rows[0].options.find(o => o.id === findQ('WEB-examtopics-20-c7e10c9f').correct.r1).text.toLowerCase().includes('retrieval'));
 assert.match(findQ('WEB-examtopics-27-0ad71346').stem, /support|supported/i);
 assert.match(JSON.stringify(roleQ.rowReasoning), /provést může/);
-console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; runtime/source/classification consistency; known-fix regressions. ${bank.qualityCounts.unresolved} unscored.`);
+require('./tests/service-worker.js')().then(() => {
+  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
+}).catch(error => { console.error(error); process.exitCode = 1; });

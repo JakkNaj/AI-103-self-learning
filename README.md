@@ -27,7 +27,9 @@ No login, model/API calls, analytics or synchronization service. Answers, notes,
 
 Answer order is shuffled once per fresh attempt and persists through checks, notes, navigation and reload. **Mark as confused** before or after answering; clear it explicitly when ready. Reuse the note field for what needs explaining.
 
-The HTTPS app caches its files, guides and exhibits after a successful first load for offline use. Open it online once before going offline. Updates install a compatible bundle; close existing app tabs and reopen online to activate a new bundle. On a phone, you can add the page to your home screen through the browser's menu.
+**Next question** sits beside **Check answer / Try again**, before notes and reasoning. Next, Previous and Jump open the question counter at the top of the viewport. Checking answers keeps your position. Answer letters are assigned after shuffling; stored IDs such as `A` are grading identities, not the displayed correct-answer letter. **Try again** starts a fresh shuffled attempt.
+
+The HTTPS app caches its files, guides and exhibits after a successful first load for offline use. Open it online once before going offline. Updates prepare the complete bundle before activation, then reload while retaining saved progress and answer order. Users of older versions should reload online after the update downloads. On a phone, you can add the page to your home screen through the browser's menu.
 
 ## Material and credits
 
@@ -54,6 +56,8 @@ node verify.js
 ```
 
 This checks all 968 scored keys, deterministic option shuffling/resume, feedback identity, row/ordering/case behavior, confusion filters/merges, older backups, material-revision history and generated-data consistency. It verifies the app's behavior against the stored keys; it does **not** prove that those keys are factually correct.
+
+For the real browser flow, start `serve.py` on a fresh localhost port and evaluate `tests/practice-flow.js` in that page's browser console. It checks mobile navigation, all answer types, shuffled feedback, reload, case/review context, clearing confusion and fresh retries at 390px and 320px. It refuses to run on a public host or a notebook with existing progress.
 
 The public compiler combines `sources/bank.original.json` with `sources/revisions.json` and the per-ID review record. It regenerates both bank formats, classification/coverage, the grouped map and guide family summaries. Edit the revision patches and audit record, then run the two commands above. Keep the imported baseline immutable. The compiler maintains `sources/content-history.json` so later revisions retain known backup versions and historical definitions.
 
