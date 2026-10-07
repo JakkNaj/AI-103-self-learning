@@ -107,7 +107,7 @@
     const actions = route.mode === 'practice' ? pill(topicPath(topic.id), 'Back to families') : topicTestLink(topic.id) + pill(path(siblings[0].id), 'Learn by family');
     return `${crumbs(topic)}${detailHero(`Topic ${topic.id} · ${s.total} questions`, topic.title, topic.description, actions + (topic.guide ? pill('guides/' + topic.guide.replace('.md', '.html'), 'Read full summary') : ''))}
       <div class="topic-tools"><span class="meta">${siblings.length} decision families</span><span class="meta">${s.checked} questions checked</span><span class="meta">${s.wrong} need review</span><span class="meta">${siblings.filter(g => state.learnedGroupIds.includes(g.id)).length} families learned</span></div>
-      ${route.mode === 'practice' ? renderPractice(null, null, null, topic) : `<section class="rule-card topic-practice-entry" aria-label="Whole-topic test"><div><p class="eyebrow">Mix every decision family</p><h2>Test the whole topic.</h2><p>All ${s.total} questions from ${siblings.length} families, in a mixed order. Your place and answers are saved.</p></div>${topicTestLink(topic.id)}</section><div class="family-list">${siblings.map(familyRow).join('')}</div>`}`;
+      ${route.mode === 'practice' ? renderPractice(null, null, null, topic) : `<div class="family-list">${siblings.map(familyRow).join('')}</div>`}`;
   }
   function filters(includeRelated = true, wholeTopic) {
     const p = state.preferences;

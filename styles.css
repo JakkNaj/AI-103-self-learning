@@ -48,7 +48,3 @@ body{position:relative;isolation:isolate}body::before{content:"";position:absolu
   .review-question-list { padding: 0 0 24px; }
 }
 .option.expected { border-width: 1px; }
-
-.topic-practice-entry{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-bottom:16px;background-image:url('assets/paper-grain.svg');background-size:144px 144px;background-blend-mode:multiply}
-.topic-practice-entry h2{font-size:28px;margin-bottom:10px}.topic-practice-entry p:not(.eyebrow){color:var(--color-smoke);font-size:14px;max-width:560px}.topic-practice-entry>.pill{flex-shrink:0}
-@media(max-width:600px){.topic-practice-entry{flex-direction:column;align-items:flex-start;padding:24px;gap:20px}.topic-practice-entry .eyebrow{font-size:10px}}

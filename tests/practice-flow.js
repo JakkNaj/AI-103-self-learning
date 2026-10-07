@@ -136,13 +136,13 @@
     const topic = bank.topics.find(t => t.id === '01');
     const topicQs = w.TopicCore.selectQuestions(bank, w.TopicCore.freshState(bank), { topicId: topic.id });
     const topicRoute = q => '#topic=' + topic.id + '&mode=practice' + (q ? '&q=' + encodeURIComponent(q.id) : '');
-    const topicButton = () => $('.topic-practice-entry a');
+    const topicButton = () => $('.detail-hero [data-action="test-topic"]');
     const queueIds = () => [...$('#question-jump').options].map(o => new URLSearchParams(o.value.slice(1)).get('q'));
     const seeded = initial => { let n = initial; return () => { n = (1664525 * n + 1013904223) >>> 0; return n / 4294967296; }; };
     for (const item of bank.topics) {
       await go('#topic=' + item.id);
       assert(topicButton()?.textContent === 'Test whole topic' && topicButton().hash === '#topic=' + item.id + '&mode=practice', 'Each topic must have the prominent whole-topic entry');
-      assert($('.topic-practice-entry').nextElementSibling.classList.contains('family-list'), 'Test entry must sit immediately above families');
+      assert(w.document.querySelectorAll('[data-action="test-topic"]').length === 1 && !$('.topic-practice-entry'), 'Each topic must have only the header test button');
       assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Topic entry must fit a phone');
     }
     await go('#topic=' + topic.id);

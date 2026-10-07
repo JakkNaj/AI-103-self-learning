@@ -14,7 +14,7 @@ Everything is provided **as is, without warranties of accuracy, completeness, fi
 
 ## Study
 
-- **Topics:** use **Test whole topic**, in the header or immediately above the family list, to mix all questions from every family. Entering through this button shows all sources/statuses; filters can narrow the test afterwards. The mixed sequence and your position survive navigation, reload and backup/import. **Reshuffle questions** generates a new sequence without resetting answers, notes or flags. Or choose one family to learn its rule and compare variants. Topic and family practice share question records.
+- **Topics:** use **Test whole topic** in the header to mix all questions from every family. Entering through this button shows all sources/statuses; filters can narrow the test afterwards. The mixed sequence and your position survive navigation, reload and backup/import. **Reshuffle questions** generates a new sequence without resetting answers, notes or flags. Or choose one family to learn its rule and compare variants. Topic and family practice share question records.
 - **Case studies:** read a shared scenario and answer only that case's tasks, in source order.
 - **Review:** revisit confused questions independently of correctness, retry mistakes and practice saved questions. Source/topic filters narrow the queue.
 - **Progress:** export a backup; import it on another device to merge answers and notes.
