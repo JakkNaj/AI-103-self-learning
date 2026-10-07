@@ -34,7 +34,7 @@ module.exports = async function verifyServiceWorker() {
       Request: class { constructor(url, options) { this.url = url; this.cache = options.cache; } },
       caches: {
         open: async () => cache,
-        keys: async () => ['other-app', 'ai103-topic-lab-2026-10-07-v6', 'ai103-topic-lab-2026-10-07-v8'],
+        keys: async () => ['other-app', 'ai103-topic-lab-2026-10-07-v6', 'ai103-topic-lab-2026-10-07-v9'],
         delete: async key => { deleted.push(key); },
       },
       fetch: async () => { throw Error('Offline'); },
