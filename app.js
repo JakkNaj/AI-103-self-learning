@@ -31,6 +31,7 @@
   const statusNames = { all: 'All questions', unanswered: 'Unanswered', wrong: 'Needs review', bookmarked: 'Saved questions', confused: 'Confused' };
   const isImported = q => ['sefstratiou', 'pvejayan', 'examtopics'].includes(q.sourceId);
   const path = (group, mode = 'learn', q) => '#group=' + encodeURIComponent(group) + '&mode=' + mode + (q ? '&q=' + encodeURIComponent(q) : '');
+  const topicPath = (id, mode = 'learn', q) => '#topic=' + encodeURIComponent(id) + (mode === 'practice' ? '&mode=practice' : '') + (q ? '&q=' + encodeURIComponent(q) : '');
   const casePath = (id, mode = 'read', q) => '#case=' + encodeURIComponent(id) + '&mode=' + mode + (q ? '&q=' + encodeURIComponent(q) : '');
   const caseTitle = study => study.title.replace(/^Case study:\s*/i, '');
   const pill = (href, label, primary = false) => `<a class="pill${primary ? ' primary' : ''}" href="${e(href)}">${e(label)}</a>`;
@@ -52,7 +53,7 @@
     if (hash === 'cases') return { kind: 'cases' };
     if (params.has('case')) return { kind: 'case', case: params.get('case'), mode: params.get('mode') === 'practice' ? 'practice' : 'read', q: params.get('q') };
     if (params.has('group')) return { kind: 'group', group: params.get('group'), mode: ['learn', 'practice', 'compare'].includes(params.get('mode')) ? params.get('mode') : 'learn', q: params.get('q') };
-    if (params.has('topic')) return { kind: 'topic', topic: params.get('topic') };
+    if (params.has('topic')) return { kind: 'topic', topic: params.get('topic'), mode: params.get('mode') === 'practice' ? 'practice' : 'learn', q: params.get('q') };
     if (hash === 'progress') return { kind: 'progress' };
     if (hash === 'review' || params.has('review')) return { kind: 'review' };
     if (params.has('practice')) return { kind: 'review-practice', status: ['wrong', 'bookmarked', 'unanswered', 'confused'].includes(params.get('practice')) ? params.get('practice') : 'wrong', q: params.get('q') };
@@ -102,13 +103,14 @@
   }
   function renderTopic(topic) {
     const s = topicStats(topic), siblings = topic.groupIds.map(id => groups.get(id));
-    return `${crumbs(topic)}${detailHero(`Topic ${topic.id} · ${s.total} questions`, topic.title, topic.description, pill(path(siblings[0].id), 'Begin this topic', true) + (topic.guide ? pill('guides/' + topic.guide.replace('.md', '.html'), 'Read full summary') : ''))}
+    const actions = route.mode === 'practice' ? pill(topicPath(topic.id), 'Back to families') : pill(topicPath(topic.id, 'practice'), 'Practice whole topic', true) + pill(path(siblings[0].id), 'Learn by family');
+    return `${crumbs(topic)}${detailHero(`Topic ${topic.id} · ${s.total} questions`, topic.title, topic.description, actions + (topic.guide ? pill('guides/' + topic.guide.replace('.md', '.html'), 'Read full summary') : ''))}
       <div class="topic-tools"><span class="meta">${siblings.length} decision families</span><span class="meta">${s.checked} questions checked</span><span class="meta">${s.wrong} need review</span><span class="meta">${siblings.filter(g => state.learnedGroupIds.includes(g.id)).length} families learned</span></div>
-      <div class="family-list">${siblings.map(familyRow).join('')}</div>`;
+      ${route.mode === 'practice' ? renderPractice(null, null, null, topic) : `<div class="family-list">${siblings.map(familyRow).join('')}</div>`}`;
   }
   function filters(includeRelated = true) {
     const p = state.preferences;
-    return `<div class="filter-bar"><label class="field">Question source<select id="source-filter"><option value="all">All sources</option>${Object.entries(sourceNames).map(([key, value]) => `<option value="${key}"${p.source === key ? ' selected' : ''}>${value}</option>`).join('')}</select></label><label class="field">Show<select id="status-filter">${Object.entries(statusNames).map(([key, value]) => `<option value="${key}"${p.status === key ? ' selected' : ''}>${value}</option>`).join('')}</select></label>${includeRelated ? `<label class="check-label"><input id="related-filter" type="checkbox"${p.related ? ' checked' : ''}>Include related questions</label>` : ''}${(p.source !== 'all' || p.status !== 'all' || p.related) ? '<button class="pill small-pill" data-action="clear-filters">Clear filters</button>' : ''}</div>`;
+    return `<div class="filter-bar"><label class="field">Question source<select id="source-filter"><option value="all">All sources</option>${Object.entries(sourceNames).map(([key, value]) => `<option value="${key}"${p.source === key ? ' selected' : ''}>${value}</option>`).join('')}</select></label><label class="field">Show<select id="status-filter">${Object.entries(statusNames).map(([key, value]) => `<option value="${key}"${p.status === key ? ' selected' : ''}>${value}</option>`).join('')}</select></label>${includeRelated ? `<label class="check-label"><input id="related-filter" type="checkbox"${p.related ? ' checked' : ''}>Include related questions</label>` : ''}${(p.source !== 'all' || p.status !== 'all' || includeRelated && p.related) ? '<button class="pill small-pill" data-action="clear-filters">Clear filters</button>' : ''}</div>`;
   }
   function familyQuestions(group) { return core.selectQuestions(bank, state, { groupId: group.id, ...state.preferences }); }
   function questionRow(q, review = false, targetOverride) {
@@ -214,25 +216,28 @@
     }).join('');
     return `<aside class="reasoning-panel"><div class="answer-result" role="status">${readOnly ? 'Answer & reasoning' : evaluation.correct ? 'Correct.' : 'A useful distinction.'}</div>${!readOnly ? `<p class="small muted">${evaluation.earned} / ${evaluation.possible} ${evaluation.possible > 1 ? 'rows correct' : 'question points'}</p>` : ''}${sourceLine(q)}<div class="answer-line"><span class="rule-label">Expected ${q.type === 'ordering' ? 'sequence' : 'answer'}</span>${e(expectedText(q))}</div>${q.explanationHtml || textBlock(q.explanation)}${details ? `<details style="margin-top:20px"${!readOnly && q.type !== 'rows' ? ' open' : ''}><summary class="small" style="cursor:pointer;min-height:36px">Reasoning by ${q.type === 'rows' ? 'row' : 'option'}</summary>${details}</details>` : '<p class="small muted" style="margin-top:18px">This source supplies an overall explanation. Use the decision rule below to contrast the remaining choices.</p>'}<div class="rule-card"><span class="rule-label">Decision rule · study guidance</span><p>${e(q.decisionRule || group.rule)}</p><p style="margin-top:10px">${e(group.contrast)}</p></div><div class="source-links">${(q.references || []).filter(ref => /^(https?:\/\/|guides\/|#)/.test(ref.url)).map(ref => `<a href="${e(ref.url)}"${ref.url.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${e(ref.label || 'Primary documentation')} ↗</a>`).join('')}</div></aside>`;
   }
-  function prepareQueue(group, reviewStatus, study) {
-    const key = study ? 'case:' + study.id : reviewStatus ? 'review:' + reviewStatus + JSON.stringify(state.preferences) : group.id + JSON.stringify(state.preferences);
+  function prepareQueue(group, reviewStatus, study, wholeTopic) {
+    const key = study ? 'case:' + study.id : (wholeTopic ? 'topic:' + wholeTopic.id : reviewStatus ? 'review:' + reviewStatus : group.id) + JSON.stringify(state.preferences);
     if (queueKey !== key || !queue) {
-      queue = study ? core.caseQuestions(bank, study.id).map(q => q.id) : reviewStatus ? core.selectQuestions(bank, state, { status: reviewStatus, source: state.preferences.source, topicId: state.preferences.reviewTopic }).map(q => q.id) : familyQuestions(group).map(q => q.id);
+      queue = study ? core.caseQuestions(bank, study.id).map(q => q.id) : wholeTopic ? core.selectQuestions(bank, state, { topicId: wholeTopic.id, source: state.preferences.source, status: state.preferences.status }).map(q => q.id) : reviewStatus ? core.selectQuestions(bank, state, { status: reviewStatus, source: state.preferences.source, topicId: state.preferences.reviewTopic }).map(q => q.id) : familyQuestions(group).map(q => q.id);
       queueKey = key;
     }
     return queue;
   }
-  function renderPractice(group, reviewStatus, study) {
-    const ids = prepareQueue(group, reviewStatus, study);
-    if (!ids.length) return reviewStatus ? reviewFilters() + `<div class="empty-state"><h2>${reviewStatus === 'confused' ? 'No confused questions in this view.' : 'Nothing to review yet.'}</h2><p>Marked questions stay here until you clear them. Try another source or topic.</p><div class="actions">${pill('#home', 'Choose a topic', true)}</div></div>` : filters() + emptyQuestions();
-    let id = route.q && ids.includes(route.q) ? route.q : group && ids.includes(state.positions[group.id]) ? state.positions[group.id] : ids[0];
+  function renderPractice(group, reviewStatus, study, wholeTopic) {
+    const ids = prepareQueue(group, reviewStatus, study, wholeTopic);
+    if (!ids.length) return reviewStatus ? reviewFilters() + `<div class="empty-state"><h2>${reviewStatus === 'confused' ? 'No confused questions in this view.' : 'Nothing to review yet.'}</h2><p>Marked questions stay here until you clear them. Try another source or topic.</p><div class="actions">${pill('#home', 'Choose a topic', true)}</div></div>` : filters(!wholeTopic) + emptyQuestions();
+    const savedId = wholeTopic ? state.topicPositions[wholeTopic.id] : group ? state.positions[group.id] : null;
+    let id = route.q && ids.includes(route.q) ? route.q : ids.includes(savedId) ? savedId : ids[0];
     const q = questions.get(id), index = ids.indexOf(id), qgroup = groups.get(q.groupId), topic = topics.get(q.topicId);
-    state.positions[group?.id || qgroup.id] = id; state.lastGroup = group?.id || qgroup.id; save();
-    const jump = target => study ? casePath(study.id, 'practice', target) : reviewStatus ? '#practice=' + reviewStatus + '&q=' + encodeURIComponent(target) : path(group.id, 'practice', target);
+    state.positions[group?.id || qgroup.id] = id; state.lastGroup = group?.id || qgroup.id;
+    if (wholeTopic) state.topicPositions[wholeTopic.id] = id;
+    save();
+    const jump = target => study ? casePath(study.id, 'practice', target) : wholeTopic ? topicPath(wholeTopic.id, 'practice', target) : reviewStatus ? '#practice=' + reviewStatus + '&q=' + encodeURIComponent(target) : path(group.id, 'practice', target);
     const next = index < ids.length - 1
       ? { href: jump(ids[index + 1]), label: 'Next question →' }
-      : { href: study ? casePath(study.id) : reviewStatus ? '#review' : '#topic=' + group.topicId, label: study ? 'Finish case study' : reviewStatus ? 'Finish review' : 'Finish this family' };
-    return `${reviewStatus ? crumbs(topic, qgroup) + `<div class="page-title"><p class="eyebrow">Review · topics kept together</p><h1>${e(qgroup.title)}</h1><p>${e(statusNames[reviewStatus])} · Clear a confusion mark whenever the distinction makes sense.</p></div>` + reviewFilters() : study ? '' : filters()}<div class="practice-top" id="practice-top" tabindex="-1" aria-label="Question navigation"><span class="meta">${index + 1} / ${ids.length} · ${study ? 'Case-study task' : e(qgroup.title)}</span><label class="field">Jump to question<select id="question-jump">${ids.map((qid, i) => `<option value="${e(jump(qid))}"${qid === id ? ' selected' : ''}>${i + 1} · ${e(questions.get(qid).sourceLabel)}</option>`).join('')}</select></label></div><div class="question-progress" aria-hidden="true"><span style="width:${100 * (index + 1) / ids.length}%"></span></div><div class="practice-layout">${questionHtml(q, false, false, next)}${reasoningHtml(q)}</div><div class="practice-bottom"><a href="${e(path(qgroup.id, 'compare', q.id))}">Compare within this family ↗</a><div class="actions">${index > 0 ? pill(jump(ids[index - 1]), '← Previous') : '<span></span>'}</div></div>${index === ids.length - 1 && !reviewStatus && !study ? `<div class="notice">Family complete? If you can explain the distinction without looking, mark it learned above. You can repeat missed questions through the “Needs review” filter.</div>` : ''}`;
+      : { href: study ? casePath(study.id) : wholeTopic ? topicPath(wholeTopic.id) : reviewStatus ? '#review' : '#topic=' + group.topicId, label: study ? 'Finish case study' : wholeTopic ? 'Finish topic' : reviewStatus ? 'Finish review' : 'Finish this family' };
+    return `${reviewStatus ? crumbs(topic, qgroup) + `<div class="page-title"><p class="eyebrow">Review · topics kept together</p><h1>${e(qgroup.title)}</h1><p>${e(statusNames[reviewStatus])} · Clear a confusion mark whenever the distinction makes sense.</p></div>` + reviewFilters() : study ? '' : filters(!wholeTopic)}<div class="practice-top" id="practice-top" tabindex="-1" aria-label="Question navigation"><span class="meta">${index + 1} / ${ids.length} · ${study ? 'Case-study task' : e(qgroup.title)}</span><label class="field">Jump to question<select id="question-jump">${ids.map((qid, i) => `<option value="${e(jump(qid))}"${qid === id ? ' selected' : ''}>${i + 1} · ${wholeTopic ? e(groups.get(questions.get(qid).groupId).title) + ' · ' : ''}${e(questions.get(qid).sourceLabel)}</option>`).join('')}</select></label></div><div class="question-progress" aria-hidden="true"><span style="width:${100 * (index + 1) / ids.length}%"></span></div><div class="practice-layout">${questionHtml(q, false, false, next)}${reasoningHtml(q)}</div><div class="practice-bottom"><a href="${e(path(qgroup.id, 'compare', q.id))}">Compare within this family ↗</a><div class="actions">${index > 0 ? pill(jump(ids[index - 1]), '← Previous') : '<span></span>'}</div></div>${index === ids.length - 1 && !reviewStatus && !study && !wholeTopic ? `<div class="notice">Family complete? If you can explain the distinction without looking, mark it learned above. You can repeat missed questions through the “Needs review” filter.</div>` : ''}`;
   }
   function renderCompare(group) {
     const qs = familyQuestions(group);
@@ -345,11 +350,11 @@
       delete r.evaluation; core.beginAttempt(q, r, true); sessionFeedback.delete(q.id); save(); render(true);
     } else if (action === 'confused') {
       const r = record(q); state.records[q.id] ||= {}; core.toggleConfused(state.records[q.id]);
-      const reviewingConfusion = route.kind === 'review-practice' && route.status === 'confused' || route.kind === 'group' && state.preferences.status === 'confused';
+      const reviewingConfusion = route.kind === 'review-practice' && route.status === 'confused' || route.kind === 'group' && state.preferences.status === 'confused' || route.kind === 'topic' && route.mode === 'practice' && state.preferences.status === 'confused';
       if (!r.confused && reviewingConfusion && queue) {
         const index = queue.indexOf(q.id); queue = queue.filter(id => record(questions.get(id)).confused);
         const next = queue[Math.min(Math.max(index, 0), queue.length - 1)];
-        if (next) { route.q = next; history.replaceState(null, '', route.kind === 'review-practice' ? '#practice=confused&q=' + encodeURIComponent(next) : path(route.group, 'practice', next)); }
+        if (next) { route.q = next; history.replaceState(null, '', route.kind === 'review-practice' ? '#practice=confused&q=' + encodeURIComponent(next) : route.kind === 'topic' ? topicPath(route.topic, 'practice', next) : path(route.group, 'practice', next)); }
       }
       save(); render(true);
       (main.querySelector(`[data-action="confused"][data-id="${q.id}"]`) || main.querySelector('[data-action="confused"]') || main.querySelector('.empty-state a'))?.focus({ preventScroll: true });

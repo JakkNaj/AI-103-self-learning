@@ -10,7 +10,7 @@ module.exports = async function verifyServiceWorker() {
   const bank = JSON.parse(fs.readFileSync(path.join(root, 'data/bank.json')));
   const origin = 'https://example.test', scope = origin + '/study/';
   function worker(failMedia = false) {
-    const events = {}, steps = [], deleted = [];
+    const events = {}, steps = [], deleted = []; let currentCache;
     const cache = {
       addAll: async requests => {
         assert(requests.every(r => r.cache === 'reload'), 'Update must bypass stale HTTP assets');
@@ -29,16 +29,17 @@ module.exports = async function verifyServiceWorker() {
       skipWaiting: async () => { steps.push('activate-ready'); },
       clients: { claim: async () => { steps.push('claim'); } },
     };
-    vm.runInNewContext(source, {
+    const context = vm.createContext({
       self, URL, Response,
       Request: class { constructor(url, options) { this.url = url; this.cache = options.cache; } },
       caches: {
         open: async () => cache,
-        keys: async () => ['other-app', 'ai103-topic-lab-2026-10-07-v6', 'ai103-topic-lab-2026-10-07-v9'],
+        keys: async () => ['other-app', 'ai103-topic-lab-2026-10-07-v6', currentCache],
         delete: async key => { deleted.push(key); },
       },
       fetch: async () => { throw Error('Offline'); },
     });
+    vm.runInContext(source, context); currentCache = vm.runInContext('CACHE', context);
     const run = async name => { let pending; events[name]({ waitUntil: task => { pending = task; } }); await pending; };
     return { events, steps, deleted, run };
   }

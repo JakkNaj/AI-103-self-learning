@@ -276,6 +276,46 @@ assert.match(findQ('WEB-sefstratiou-143-dfb11805').code, /time.sleep\(delay\)/);
 assert(findQ('WEB-examtopics-20-c7e10c9f').rows[0].options.find(o => o.id === findQ('WEB-examtopics-20-c7e10c9f').correct.r1).text.toLowerCase().includes('retrieval'));
 assert.match(findQ('WEB-examtopics-27-0ad71346').stem, /support|supported/i);
 assert.match(JSON.stringify(roleQ.rowReasoning), /provést může/);
+// Whole-topic queues contain every scored primary question once, in family order.
+const topicState = core.freshState(bank);
+for (const topic of bank.topics) {
+  const expected = topic.groupIds.flatMap(id => bank.groups.find(g => g.id === id).questionIds)
+    .filter(id => bank.questions.find(q => q.id === id).scored !== false);
+  const qs = core.selectQuestions(bank, topicState, { topicId: topic.id });
+  assert.deepEqual(qs.map(q => q.id), [...new Set(expected)], 'whole topic: ' + topic.id);
+  assert(qs.every(q => q.topicId === topic.id));
+  for (const source of Object.keys(bank.sourceCounts)) {
+    assert.deepEqual(core.selectQuestions(bank, topicState, { topicId: topic.id, source }).map(q => q.id), qs.filter(q => q.sourceId === source).map(q => q.id));
+  }
+}
+const agentQuestions = core.selectQuestions(bank, topicState, { topicId: '01' });
+const agentQ = agentQuestions[0];
+topicState.records[agentQ.id] = { note: 'Topic notebook', bookmark: true, confused: true, confusedAt: '2099-01-01T00:00:00Z' };
+core.beginAttempt(agentQ, topicState.records[agentQ.id], false, () => 0);
+const topicRecord = topicState.records[agentQ.id];
+topicRecord.draft = core.clone(agentQ.correct); topicRecord.evaluation = core.grade(agentQ, agentQ.correct);
+topicState.positions[agentQ.groupId] = agentQ.id; topicState.topicPositions['01'] = agentQ.id;
+assert.deepEqual(core.selectQuestions(bank, topicState, { topicId: '01', status: 'confused' }).map(q => q.id), [agentQ.id]);
+const resumedTopic = core.validateBackup(core.clone(topicState), bank);
+assert.equal(resumedTopic.topicPositions['01'], agentQ.id);
+assert.deepEqual(resumedTopic.records[agentQ.id].presentation, topicRecord.presentation);
+const oldTopicBackup = core.clone(topicState); delete oldTopicBackup.topicPositions;
+const migratedTopic = core.validateBackup(oldTopicBackup, bank);
+assert.deepEqual(migratedTopic.topicPositions, {});
+assert.equal(migratedTopic.records[agentQ.id].note, 'Topic notebook');
+assert(migratedTopic.records[agentQ.id].bookmark && migratedTopic.records[agentQ.id].confused && migratedTopic.records[agentQ.id].evaluation.correct);
+assert.equal(core.mergeStates(topicState, migratedTopic, bank).topicPositions['01'], agentQ.id);
+const incomingTopic = core.freshState(bank);
+incomingTopic.topicPositions['01'] = agentQuestions[1].id;
+const roleTopicQ = core.selectQuestions(bank, incomingTopic, { topicId: '08' })[0];
+incomingTopic.topicPositions['08'] = roleTopicQ.id;
+const combinedTopics = core.mergeStates(topicState, incomingTopic, bank);
+assert.equal(combinedTopics.topicPositions['01'], agentQ.id);
+assert.equal(combinedTopics.topicPositions['08'], roleTopicQ.id);
+for (const positions of [null, [], { unknown: agentQ.id }, { '08': agentQ.id }]) {
+  const bad = core.clone(topicState); bad.topicPositions = positions;
+  assert.throws(() => core.validateBackup(bad, bank), /topic position/);
+}
 require('./tests/service-worker.js')().then(() => {
-  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
+  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 whole-topic queues/filters/resume/legacy backups; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
 }).catch(error => { console.error(error); process.exitCode = 1; });

@@ -14,7 +14,7 @@ Everything is provided **as is, without warranties of accuracy, completeness, fi
 
 ## Study
 
-- **Topics:** choose a narrow decision family, learn its rule, compare variants and practice.
+- **Topics:** use **Practice whole topic** to answer every family in one sequence, or choose a family to learn its rule and compare variants. Whole-topic practice supports source/status filters, remembers your position, and shares answers, notes and confusion marks with family practice.
 - **Case studies:** read a shared scenario and answer only that case's tasks, in source order.
 - **Review:** revisit confused questions independently of correctness, retry mistakes and practice saved questions. Source/topic filters narrow the queue.
 - **Progress:** export a backup; import it on another device to merge answers and notes.

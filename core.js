@@ -74,7 +74,7 @@
     // Explicit false is a tombstone. Older/missing information cannot resurrect it.
     record.confusedAt = new Date(Math.max(Date.parse(at), (Date.parse(record.confusedAt || '') || 0) + 1)).toISOString(); return record.confused;
   }
-  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
+  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, topicPositions: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
   function definition(bank, q, hash) {
     return q.contentHash === hash ? q : (bank.contentHistory || []).find(old => old.id === q.id && old.contentHash === hash);
   }
@@ -170,6 +170,13 @@
       if (!groupIds.has(group) || typeof id !== 'string') throw Error('Invalid family position.');
       if (byId.has(id)) safe.positions[group] = id;
     }
+    // Optional in older notebooks; topic progress is independent of family positions.
+    const topicPositions = value.topicPositions === undefined ? {} : value.topicPositions;
+    if (!object(topicPositions)) throw Error('Invalid topic positions.');
+    for (const [topic, id] of Object.entries(topicPositions)) {
+      if (!bank.topics.some(t => t.id === topic) || typeof id !== 'string' || byId.has(id) && byId.get(id).topicId !== topic) throw Error('Invalid topic position.');
+      if (byId.has(id)) safe.topicPositions[topic] = id;
+    }
     const p = value.preferences;
     if (!object(p) || !sources.includes(p.source) || !statuses.includes(p.status) || typeof p.related !== 'boolean') throw Error('Invalid filters.');
     if (p.reviewTopic !== undefined && p.reviewTopic !== 'all' && !bank.topics.some(t => t.id === p.reviewTopic)) throw Error('Invalid review topic.');
@@ -204,6 +211,7 @@
     const a = validateBackup(current, bank), b = validateBackup(imported, bank);
     for (const field of ['records', 'retiredRecords']) for (const [id, incoming] of Object.entries(b[field])) a[field][id] = mergeRecord(a[field][id], incoming);
     a.learnedGroupIds = [...new Set([...a.learnedGroupIds, ...b.learnedGroupIds])]; a.positions = { ...b.positions, ...a.positions };
+    a.topicPositions = { ...b.topicPositions, ...a.topicPositions };
     return validateBackup(a, bank);
   }
   function matchesStatus(q, record, status) {
