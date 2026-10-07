@@ -1,6 +1,6 @@
 /* Install a complete version together; never mix cached code and question data. */
 const CACHE_PREFIX = 'ai103-topic-lab-';
-const CACHE = CACHE_PREFIX + '2026-10-07-v7';
+const CACHE = CACHE_PREFIX + '2026-10-07-v8';
 const shell = ['.','index.html','styles.css','core.js','app.js','data/bank.js','data/bank.json','data/question-audit.json','manifest.webmanifest','assets/icon.svg','assets/paper-grain.svg','assets/color-grain.svg','assets/inter-latin.woff2','README.md','GROUPED-QUESTION-MAP.md','CONTENT-REVIEW.md','THIRD_PARTY_NOTICES.txt'];
 self.addEventListener('install', event => {
   event.waitUntil((async () => {

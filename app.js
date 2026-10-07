@@ -379,6 +379,13 @@
   });
   window.addEventListener('hashchange', () => { compareIds = []; compareRevealed = false; expandedList = false; render(); });
   save(); render();
+  // A late font swap can move the heading above the initial scroll target.
+  // Align again only while this untouched practice view still has navigation focus.
+  const initialStart = document.getElementById('practice-top'), initialY = window.scrollY;
+  if (initialStart && document.fonts) document.fonts.ready.then(() => {
+    if (initialStart.isConnected && document.activeElement === initialStart && window.scrollY === initialY)
+      initialStart.scrollIntoView({ block: 'start', behavior: 'instant' });
+  });
   if (storageError) { document.getElementById('save-status').textContent = 'Storage issue · open Progress'; toast('Existing progress could not load. Open Progress to recover it.'); }
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     // Reload the complete cached bundle on updates; drafts and answer orders are already saved.
