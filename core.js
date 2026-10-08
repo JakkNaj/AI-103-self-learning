@@ -192,6 +192,12 @@
         const members = practiceSets.get(setId), ids = field === 'setOrders' ? entry : [entry];
         if (!members || !Array.isArray(ids) || ids.length > 10000 || new Set(ids).size !== ids.length || ids.some(id => !safeId(id) || byId.has(id) && byId.get(id).scored !== false && !members.has(id))) throw Error('Invalid practice set '+field+'.');
         const kept = ids.filter(id => members.has(id));
+        const set = bank.practiceSets.find(s => s.id === setId);
+        if (field === 'setOrders' && set.kind === 'mock') {
+          const counts = {};
+          for (const id of kept) { const family = byId.get(id).groupId; counts[family] = (counts[family] || 0) + 1; }
+          if (Object.values(counts).some(n => n > set.questionsPerFamily)) throw Error('Invalid mock family coverage.');
+        }
         if (field === 'setOrders') safe[field][setId] = kept;
         else if (kept.length) safe[field][setId] = kept[0];
       }
@@ -273,15 +279,40 @@
     const eligible = new Set(selectQuestions(bank, state).map(q => q.id));
     const ids = set.questionIds.filter(id => eligible.has(id)); state.setOrders ||= {};
     const members = new Set(ids), saved = fresh ? [] : (state.setOrders[setId] || []).filter(id => members.has(id));
+    if (set.kind === 'mock') {
+      const byId = new Map(bank.questions.map(q => [q.id,q])), additions = [];
+      for (const group of bank.groups) {
+        const chosen = saved.filter(id => byId.get(id).groupId === group.id);
+        const candidates = ids.filter(id => byId.get(id).groupId === group.id && !chosen.includes(id));
+        const remaining = set.questionsPerFamily - chosen.length;
+        if (remaining < 0 || candidates.length < remaining) throw Error('Each mock family needs two distinct scored questions.');
+        if (remaining) additions.push(...shuffle(candidates,random).slice(0,remaining));
+      }
+      state.setOrders[setId] = saved.length ? [...saved,...shuffle(additions,random)] : shuffle(additions,random);
+      return state.setOrders[setId];
+    }
     const seen = new Set(saved);
     state.setOrders[setId] = [...saved, ...shuffle(ids.filter(id => !seen.has(id)), random)];
     return state.setOrders[setId];
   }
   function setQuestions(bank, state, setId, { source = 'all', status = 'all' } = {}, random = Math.random) {
     const order = beginSetOrder(bank, state, setId, false, random);
+    // The mock always covers every family twice; narrower study filters belong to other views.
+    if (bank.practiceSets.find(s => s.id === setId).kind === 'mock') { source = status = 'all'; }
     const selected = new Map(selectQuestions(bank, state, { source, status }).map(q => [q.id,q]));
     return order.filter(id => selected.has(id)).map(id => selected.get(id));
   }
-  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus, beginTopicOrder, topicQuestions, beginSetOrder, setQuestions };
+  function beginMockAttempt(bank, state, random = Math.random) {
+    const order = beginSetOrder(bank,state,'mock',true,random);
+    const byId = new Map(bank.questions.map(q => [q.id,q]));
+    for (const id of order) {
+      const q = byId.get(id), r = state.records[id] ||= {};
+      if (r.evaluation || r.draft !== undefined) { r.history ||= []; r.history.push(snapshot(q,r)); }
+      delete r.evaluation; beginAttempt(q,r,true,random);
+    }
+    state.setPositions.mock = order[0];
+    return order;
+  }
+  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus, beginTopicOrder, topicQuestions, beginSetOrder, setQuestions, beginMockAttempt };
   if (typeof module !== 'undefined') module.exports = root.TopicCore;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

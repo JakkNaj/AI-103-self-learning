@@ -88,3 +88,7 @@ Existing completion material satisfies the user's conditional request. No new sc
 ## Implemented update
 
 The locally revised #30 now uses a text Responses template and two selectable blanks; its former classic run image is not used for scoring. Completion inventory remains **46 questions / 105 blanks**, now **45 text templates and one image-backed exercise**. The primary domain mapping, five exam-part tests, five corresponding code subsets and one combined code test are generated from `sources/exam-blueprint.json`; source domains are preserved and 95 supplemental items have explicit assignments. Notes/flags survive the material #30 revision, while prior attempts become history.
+
+## All-family mock addition
+
+The bank now contains 973 questions (971 scored). Three locally authored supplemental questions retain explicit source-domain tags and fill singleton families. The separate mock samples two distinct questions per family: 216 questions across 108 families. It is a family-coverage study test, not a weighted Microsoft exam simulation. Existing five exam-part and six code queues remain available; code inventory is unchanged at 46 questions/105 blanks.

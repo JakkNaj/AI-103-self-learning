@@ -295,7 +295,7 @@
       assert(equal(weights, ['25–30% ↗','30–35% ↗','10–15% ↗','10–15% ↗','10–15% ↗']), 'Microsoft weight ranges must stay visible');
     }
     frame.style.width = '390px';
-    for (const set of bank.practiceSets) {
+    for (const set of bank.practiceSets.filter(s => s.kind !== 'mock')) {
       await go('#exam=' + set.id);
       assert(!!setButton(set.id), 'Every exam/code overview needs a prominent test entry');
       assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Each part overview must fit a phone');
@@ -377,6 +377,65 @@
     assert(equal(queueIds(),[desktopQ.id]), 'Desktop code review must show the newly flagged code question');
     $('[data-action="confused"]').click();
     assert(!!$('.empty-state') && read(desktopQ).evaluation.correct && read(desktopQ).note === 'Desktop code note', 'Desktop clearing must show a useful empty state and retain the answer/note');
-    return { passed: checks, widths: [390, 320, 1402], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle, green/orange feedback, all five exam parts and six code queues, code blanks/exhibit, shared progress and confused-empty flow on desktop/mobile' };
+    // All-family mock: two distinct questions per primary family, stable sampling and fresh answers.
+    const coverage = ids => {
+      assert(ids.length === 216 && new Set(ids).size === ids.length, 'Mock must contain 216 distinct questions');
+      for (const group of bank.groups) assert(ids.filter(id => bank.questions.find(q => q.id === id).groupId === group.id).length === 2, 'Mock must contain each family twice: ' + group.id);
+    };
+    frame.style.width = '390px'; await go('#home');
+    assert(!!$('.study-feature a[href="#exam=mock"]'), 'Mock must be discoverable from the home page');
+    await go('#exam'); assert(!!$('.detail-hero a[href="#exam=mock"]'), 'Exam overview must expose the all-family mock');
+    await go('#exam=mock');
+    assert(!!$('[data-action="new-mock"]') && !notebook().setOrders.mock, 'Mock overview must not start/reset a test by itself');
+    assert(w.document.querySelectorAll('.family-list .family-row').length === 16, 'Mock overview must include every topic');
+    const mockRandom = w.Math.random; w.Math.random = seeded(103);
+    $('[data-action="new-mock"]').click(); await pause(); w.Math.random = mockRandom; positioned();
+    const mockIds = queueIds(); coverage(mockIds);
+    const expectedMock = w.TopicCore.beginSetOrder(bank,w.TopicCore.freshState(bank),'mock',false,seeded(103));
+    assert(equal(mockIds,expectedMock), 'Mock must use the controlled random sample and mixed order');
+    assert(!$('#source-filter') && !$('#status-filter') && !$('[data-action="mix-topic"]'), 'Mock must keep complete family coverage without narrower practice filters');
+    assert(mockIds.every(id => !read({id}).evaluation), 'A fresh mock must not reveal previously checked answers');
+    const mockQ = bank.questions.find(q => q.id === mockIds.find(id => bank.questions.find(q => q.id === id).type === 'single' && !bank.questions.find(q => q.id === id).caseId));
+    const mockOrder = await grade(mockQ,examRoute('mock',mockQ));
+    const mockNote = $('[data-note]'); mockNote.value = 'Mock notebook note'; mockNote.dispatchEvent(new w.Event('input',{bubbles:true}));
+    if (!read(mockQ).confused) $('[data-action="confused"]').click();
+    if (!read(mockQ).bookmark) $('[data-action="bookmark"]').click();
+    assert(equal(queueIds(),mockIds) && equal(read(mockQ).presentation,mockOrder), 'Mock checks/notes/flags must keep sample and option order');
+    const mockNext = $('.question-next').hash; $('.question-next').click(); await pause(); positioned();
+    const atNext=current(); assert(w.location.hash === mockNext, 'Mock Next must stay in its sampled sequence');
+    await go('#exam=mock');
+    assert(setButton('mock')?.textContent === 'Resume mock test', 'An existing mock must expose Resume');
+    setButton('mock').click(); await pause(); positioned();
+    assert(current().id === atNext.id && equal(queueIds(),mockIds), 'Resume must keep the sample and independent position');
+    const mockReload=loaded(); w.location.reload(); await mockReload; positioned();
+    assert(current().id === atNext.id && equal(queueIds(),mockIds), 'Reload must resume the same mock sample');
+    await go(examRoute('mock',mockQ));
+    assert(equal(displayed(),mockOrder.options) && read(mockQ).evaluation.correct && read(mockQ).confused && read(mockQ).bookmark && read(mockQ).note === 'Mock notebook note', 'Reloaded mock must preserve answer identity and notebook fields');
+    const mockCase = bank.questions.find(q => q.id === mockIds.find(id => bank.questions.find(q => q.id === id).caseId));
+    await go(examRoute('mock',mockCase)); assert(!!$('.context-block'), 'Sampled case task must retain its shared narrative');
+    await go(examRoute('mock',bank.questions.find(q => q.id === mockIds.at(-1))));
+    assert($('.question-next').textContent === 'Finish mock test', 'Last sampled question must offer Finish mock test');
+    $('.question-next').click(); await pause(); assert(w.location.hash === '#exam=mock' && !!setButton('mock'), 'Finish must return to mock overview and allow resume');
+    const savedBeforeNew=read(mockQ);
+    const newMockRandom=w.Math.random; w.Math.random=seeded(103);
+    $('[data-action="new-mock"]').click(); await pause(); w.Math.random=newMockRandom; positioned();
+    assert(equal(queueIds(),mockIds), 'Same controlled seed should reproduce the selected IDs');
+    assert(!read(mockQ).evaluation && read(mockQ).history.some(h=>h.evaluation?.correct && equal(h.draft,savedBeforeNew.draft)), 'Explicit fresh mock must preserve old answers in history and require a new answer');
+    assert(read(mockQ).note==='Mock notebook note' && read(mockQ).bookmark && read(mockQ).confused, 'New mock must preserve notes/bookmarks/confusion');
+    for (const width of [320,1402]) {
+      frame.style.width=width; await go(examRoute('mock',mockQ)); await grade(mockQ,examRoute('mock',mockQ));
+      assert(w.document.documentElement.scrollWidth<=w.innerWidth, 'Mock interaction must fit mobile and desktop');
+      const same=queueIds(); $('[data-action="confused"]').click();
+      assert(equal(queueIds(),same), 'Clearing or marking confusion must not remove mock questions');
+      if(width===320) $('[data-action="retry"]').click();
+    }
+    await go('#exam=mock');
+    const alternateRandom=w.Math.random; w.Math.random=seeded(9);
+    $('[data-action="new-mock"]').click(); await pause(); w.Math.random=alternateRandom; positioned();
+    const alternateIds=queueIds(); coverage(alternateIds);
+    assert(!equal(alternateIds,mockIds) && !equal([...alternateIds].sort(),[...mockIds].sort()), 'New mock must draw another controlled question sample, then mix it');
+    const lastReload=loaded();w.location.reload();await lastReload;
+    assert(equal(queueIds(),alternateIds) && equal(notebook().setOrders.mock,alternateIds), 'New mock sample must survive refresh/export');
+    return { passed: checks, widths: [390, 320, 1402], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle, green/orange feedback, all five exam parts and six code queues, 216-question all-family mock sampling/resume/history/new attempt, shared progress on desktop/mobile' };
   } finally { frame.remove(); }
 })();

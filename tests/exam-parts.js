@@ -12,8 +12,8 @@ module.exports = function (bank, core) {
   const seeded = initial => { let n = initial; return () => { n = (1664525 * n + 1013904223) >>> 0; return n / 4294967296; }; };
   const noRandom = () => { throw Error('Saved exam order must not consume randomness.'); };
   assert.equal(parts.length, 5);
-  assert.equal(bank.practiceSets.length, 11);
-  assert.equal(new Set(bank.practiceSets.map(s => s.id)).size, 11);
+  assert.equal(bank.practiceSets.length, 12);
+  assert.equal(new Set(bank.practiceSets.map(s => s.id)).size, 12);
   assert.deepEqual(parts.map(s => [s.id, s.weightMin, s.weightMax]), [['D1',25,30],['D2',30,35],['D3',10,15],['D4',10,15],['D5',10,15]]);
   assert.equal(bank.examOutline.outlineUrl, blueprint.outlineUrl);
   assert.equal(bank.examOutline.skillsEffective, '2026-04-16');
@@ -41,7 +41,7 @@ module.exports = function (bank, core) {
   assert.equal(coverage.examPractice.codeCompletionBlanks, 105);
 
   const state = core.freshState(bank);
-  for (const set of bank.practiceSets) {
+  for (const set of bank.practiceSets.filter(s => s.kind !== 'mock')) {
     const order = core.beginSetOrder(bank, state, set.id, false, seeded(103));
     assert.deepEqual(order, core.shuffle(set.questionIds, seeded(103)), set.id + ' Fisher–Yates');
     assert.deepEqual(sorted(order), sorted(set.questionIds));

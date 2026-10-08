@@ -50,7 +50,7 @@ assert.equal(core.grade(roleQ, { ...roleQ.correct, [writeRow.id]: reader }).earn
 const all = core.freshState(bank);
 const scoredCount = bank.questions.filter(q => q.scored !== false).length;
 assert.equal(core.selectQuestions(bank, all).length, scoredCount);
-assert.equal(new Set(bank.groups.flatMap(g => g.questionIds)).size, 970);
+assert.equal(new Set(bank.groups.flatMap(g => g.questionIds)).size, bank.questions.length);
 for (const group of bank.groups) assert.equal(core.selectQuestions(bank, all, { groupId: group.id }).length, group.questionIds.filter(id => bank.questions.find(q => q.id === id).scored !== false).length);
 for (const source of Object.keys(bank.sourceCounts)) assert.equal(core.selectQuestions(bank, all, { source }).length, bank.questions.filter(q => q.sourceId === source && q.scored !== false).length);
 const caseIds = bank.cases.flatMap(study => {
@@ -123,6 +123,7 @@ assert.equal(manifest.length, bank.questions.length);
 for (const item of manifest) {
   const q = bank.questions.find(q => q.id === item.id);
   assert.equal(item.stem, q.stem); assert.equal(item.groupId, q.groupId);
+  assert.equal(item.contentHash,q.contentHash);
   assert.equal(item.scored, q.scored !== false);
 }
 const coverage = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/coverage-report.json')));
@@ -352,6 +353,7 @@ expandedBank.questions.push(added); expandedBank.groups.find(g => g.id === added
 assert.deepEqual(core.beginTopicOrder(expandedBank, topicState, '01', false, seeded(4)), [...nextOrder, added.id], 'New questions append without rearranging the existing sequence');
 assert.deepEqual(core.beginTopicOrder(bank, topicState, '01', false, noRandom), nextOrder, 'Retired questions leave the sequence without changing remaining order');
 require('./tests/exam-parts.js')(bank, core);
+require('./tests/mock.js')(bank, core);
 require('./tests/service-worker.js')().then(() => {
-  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 mixed topic queues and 11 exam/code queues, filters/resume/legacy backups, explicit reshuffle and added/retired items; 46 code completions/105 blanks; #30 material-revision migration; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
+  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 mixed topic queues and 11 exam/code queues; 216-question mock with two distinct questions per family, sampling/resume/fresh history/backup/merge; filters/resume/legacy backups, explicit reshuffle and added/retired items; 46 code completions/105 blanks; #30 material-revision migration; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
 }).catch(error => { console.error(error); process.exitCode = 1; });

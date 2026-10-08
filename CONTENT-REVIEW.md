@@ -1,12 +1,12 @@
 # Content review · 2026-10-08
 
-**970 reviewed · 887 rewritten · 81 retained · 2 unresolved · 968 scored.**
+**973 reviewed · 887 rewritten · 84 retained · 2 unresolved · 971 scored.**
 
 Rewritten includes **692 material scenario/option/code revisions** and **195 feedback/reference/clarification revisions** that retain the original progress fingerprint. The two unresolved items also receive revision history and remain outside scored practice. Question, family and case IDs remain stable. There are still 16 topics, 108 families and 61 tasks in 10 cases.
 
 | Source | Reviewed | Rewritten | Retained | Unresolved | Material scored revisions |
 |---|---:|---:|---:|---:|---:|
-| Current authored | 200 | 182 | 17 | 1 | 181 |
+| Current authored | 203 | 182 | 20 | 1 | 181 |
 | Guide examples | 65 | 65 | 0 | 0 | 46 |
 | Earlier practice | 30 | 25 | 5 | 0 | 25 |
 | Sefstratiou | 226 | 198 | 28 | 0 | 28 |
@@ -65,3 +65,17 @@ All 970 questions receive one primary official-domain mapping; 95 guide/legacy i
 **WEB-examtopics-30-6a709e3f:** replaced the old classic run image with a current Responses request. The requirement is at least one tool call, not a specific retrieval tool or automatic client-function execution. Row option identities/key preserved; full per-row explanation repaired. The changed runtime/code requires a fresh attempt and keeps prior results as history. [Microsoft Responses contract](https://learn.microsoft.com/en-us/rest/api/aifoundry/project/responses).
 
 `node verify.js` passes all 968 scored keys, 11 exam/code queue memberships, deterministic permutations, saved-order/filter/import behavior and the newly revised exercise's historical migration. The real browser suite passes 628 assertions at 320px, 390px and 1402px, including all five exam parts, six code queues, code blanks/exhibit, shared notebook state, reload and clearing the final confusion flag. Desktop/mobile screenshots were inspected. With the HTTP server stopped, cached reload restored the code queue, correct result and note; confusion changes saved and the exam evidence page loaded offline. The completed Responses template also parses as valid Python. These update checks supersede the older screenshot/cache-activation limitations above; physical-device touch testing remains outside this verification.
+
+## 2026-10-08 · All-family mock
+
+Each new mock samples two distinct scored questions from every primary family, then shuffles the complete 216-question set. All 16 topics and 108 families are represented. Related-family links do not duplicate questions; sampled case tasks retain their narrative. Resume, reload and backup/import preserve the sample, option order and position. Starting another mock preserves previous drafts/results as history and keeps notes, bookmarks and explicit confusion marks. The mock is equal family coverage, not the official exam weighting.
+
+Three new original scenarios, stored separately in `sources/supplemental-questions.json`, fill the only families that previously had one scored question. They are retained after checking their key, requirement and per-option explanation against primary documentation:
+
+- **MOCK-client-fit-001:** direct document query client vs index administration, project operations and model inference. [SearchClient](https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.searchclient?view=azure-python), [SearchIndexClient](https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.indexes.searchindexclient?view=azure-python), [Foundry SDK scope](https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview).
+- **MOCK-a2a-tasks-001:** continue an input-required task with the same task/context IDs, rather than polling without supplying input or starting duplicate work. [A2A protocol specification](https://a2a-protocol.org/latest/specification/).
+- **MOCK-bounds-001:** combine early approval termination with a coordinator-enforced iteration ceiling. [Agent Framework termination and iteration limits](https://learn.microsoft.com/en-us/agent-framework/workflows/orchestrations/group-chat).
+
+The existing 970 question definitions and grading hashes are unchanged. The previous published bank version remains accepted; classifications now carry the actual current content hashes. Runtime and source data, coverage and guide counts are synchronized. `node verify.js` passes all 971 scored keys and deterministic mock coverage/resume/backup/history tests. The browser suite passes 955 assertions at 320px, 390px and 1402px, including mock start/resume/Next/Finish/new sample, case context and independent confusion state.
+
+With the local HTTP server stopped, the mock reloaded offline with all 216 sampled IDs, current position, option presentation, correct result, note and confusion mark unchanged. Desktop and mobile screenshots were also inspected.

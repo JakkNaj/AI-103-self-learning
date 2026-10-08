@@ -2,7 +2,7 @@
 
 [Open the learning app](https://jakknaj.github.io/AI-103-self-learning/)
 
-Personal, unofficial study notebook: **970 questions, 16 topics, 108 decision families**, plus **10 case studies with 61 tasks**. Learn a rule, compare similar scenarios, then practice with answer reasoning. Works on desktop and mobile.
+Personal, unofficial study notebook: **973 questions, 16 topics, 108 decision families**, plus **10 case studies with 61 tasks**. Learn a rule, compare similar scenarios, then practice with answer reasoning. Works on desktop and mobile.
 
 ## Self-learning only · disclaimer
 
@@ -14,6 +14,7 @@ Everything is provided **as is, without warranties of accuracy, completeness, fi
 
 ## Study
 
+- **All-family mock test:** open it from Home or Exam parts. Each test draws **two distinct scored questions from every family: 216 questions across all 108 families and 16 topics**, shuffled together. **Resume mock test** keeps the same sample, answer order and position, including after reload or backup/import. **New mock test** draws another sample and starts fresh answers; previous drafts/results become history, and notes/bookmarks/confusion stay. Three original self-learning variants fill the previously single-question families. This is equal family coverage, not Microsoft's weighted exam distribution. Narrow study filters do not reduce its coverage.
 - **Exam parts:** open **Exam parts** in the navigation. Five mixed tests follow Microsoft's current April 16, 2026 outline: planning/management 25–30%, generative AI/agents 30–35%, vision/text/information extraction 10–15% each. Each part combines questions across topics. Counts are our bank coverage, not the exam distribution. The local mapping and sources are recorded in [exam-section evidence](EXAM-SECTIONS.md).
 - **Code completion:** use the dedicated **46-question / 105-blank** test, or the code-only test within any exam part. Code reading and concept matching are excluded. These exercises already existed; no additional imported question set was needed. The classic-run exercise #30 was revised to the documented current Responses API. Earlier attempts become history; notes/bookmarks/confusion survive.
 
@@ -38,12 +39,12 @@ The HTTPS app caches its files, guides and exhibits after a successful first loa
 
 ## Material and credits
 
-- 200 authored practice questions.
+- 203 authored practice questions: the original 200 plus three family-coverage variants.
 - 65 authored guide/index examples.
 - 30 earlier authored practice questions.
 - 675 imported practice questions: 226 Sefstratiou, 419 Praba Vejayan and 30 ExamTopics.
 
-Source attribution and immutable original versions are preserved. Current local revisions are identified separately. **970 reviewed: 887 rewritten, 81 retained, 2 unresolved/unscored (968 scored).** See [the review report](CONTENT-REVIEW.md) and [per-question audit](data/question-audit.json). Some reasoning is in Czech; questions are in English. Private course-note links, research snapshots, personal answers and backups are excluded from this repository.
+Source attribution and immutable original versions are preserved. Current local revisions are identified separately. **973 reviewed: 887 rewritten, 84 retained, 2 unresolved/unscored (971 scored).** Retained includes the three new authored scenarios after primary-documentation review. See [the review report](CONTENT-REVIEW.md) and [per-question audit](data/question-audit.json). Some reasoning is in Czech; questions are in English. Private course-note links, research snapshots, personal answers and backups are excluded from this repository.
 
 See [the complete grouping map](GROUPED-QUESTION-MAP.md), [classification audit](data/classification-manifest.json), [source/license notices](THIRD_PARTY_NOTICES.txt) and [Inter font license](assets/INTER-LICENSE.txt). Third-party material remains subject to its original terms. [Microsoft's official study guide](https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/ai-103) is the authority for the current exam scope.
 
@@ -60,10 +61,10 @@ python3 scripts/build_bank.py
 node verify.js
 ```
 
-This checks all 968 scored keys, deterministic option shuffling/resume, feedback identity, row/ordering/case behavior, confusion filters/merges, older backups, material-revision history, all exam/code queues and generated-data consistency. It verifies the app's behavior against the stored keys; it does **not** prove that those keys are factually correct.
+This checks all 971 scored keys, deterministic option shuffling/resume, feedback identity, row/ordering/case behavior, confusion filters/merges, older backups, material-revision history, all exam/code queues, two-per-family mock sampling/resume/fresh history and generated-data consistency. It verifies the app's behavior against the stored keys; it does **not** prove that those keys are factually correct.
 
 For the real browser flow, start `serve.py` on a fresh localhost port and evaluate `tests/practice-flow.js` in that page's browser console. It checks navigation, all answer types, green/orange feedback, exam-part/code queues, shared progress, reload, case/review context, clearing confusion and fresh retries at 390px, 320px and 1402px. It refuses to run on a public host or a notebook with existing progress.
 
-The public compiler combines `sources/bank.original.json` with `sources/revisions.json` and the per-ID review record. It regenerates both bank formats, classification/coverage, the grouped map and guide family summaries. Edit the revision patches and audit record, then run the two commands above. Keep the imported baseline immutable. The compiler maintains `sources/content-history.json` so later revisions retain known backup versions and historical definitions.
+The public compiler combines `sources/bank.original.json` with `sources/revisions.json`, `sources/supplemental-questions.json` and the per-ID review record. It regenerates both bank formats, classification/coverage, the grouped map and guide family summaries. Edit the revision patches or supplemental questions and audit record, then run the two commands above. Keep the imported baseline immutable. The compiler maintains `sources/content-history.json` so later revisions retain known backup versions and historical definitions.
 
 The compiled bank and local HTML guides are included. All app paths are relative. GitHub Pages publishes `main` from the repository root; `.nojekyll` keeps the files as a plain static site. After editing, commit and push to update the site. Keep bank IDs and content/version fingerprints stable unless the learning content changes, so saved progress remains compatible.

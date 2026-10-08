@@ -7344,5 +7344,28 @@
       "https://learn.microsoft.com/en-us/azure/foundry/concepts/authentication-authorization-foundry",
       "https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-python"
     ]
+  },
+  "MOCK-client-fit-001": {
+    "status": "retained",
+    "reason": "New locally authored family-coverage scenario retained after checking the requirement, key, alternatives and reasoning against primary documentation.",
+    "evidence": [
+      "https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.searchclient?view=azure-python",
+      "https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.indexes.searchindexclient?view=azure-python",
+      "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview"
+    ]
+  },
+  "MOCK-a2a-tasks-001": {
+    "status": "retained",
+    "reason": "New locally authored family-coverage scenario retained after checking the requirement, key, alternatives and reasoning against primary documentation.",
+    "evidence": [
+      "https://a2a-protocol.org/latest/specification/"
+    ]
+  },
+  "MOCK-bounds-001": {
+    "status": "retained",
+    "reason": "New locally authored family-coverage scenario retained after checking the requirement, key, alternatives and reasoning against primary documentation.",
+    "evidence": [
+      "https://learn.microsoft.com/en-us/agent-framework/workflows/orchestrations/group-chat"
+    ]
   }
 }

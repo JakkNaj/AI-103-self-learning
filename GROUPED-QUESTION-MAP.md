@@ -1,6 +1,6 @@
 # AI-103 · Grouped question map
 
-Reviewed 2026-10-08: **970 questions · 968 scored · 2 unresolved · 16 topics · 108 decision families**.
+Reviewed 2026-10-08: **973 questions · 971 scored · 2 unresolved · 16 topics · 108 decision families**.
 
 Local revisions preserve original attribution. Original imports are in `sources/bank.original.json`; current stems, keys and feedback are compiled from reviewed patches. [Review report](CONTENT-REVIEW.md) · [Per-question audit](data/question-audit.json).
 
@@ -61,7 +61,7 @@ Start with the input, required output, and constraints.
 - **Sefstratiou · #189** (`WEB-sefstratiou-189-bfc0d3eb`) · rewritten — For each requirement, select the most direct mechanism.
 - **Praba Vejayan · #661** (`WEB-pvejayan-661-6bb78881`) · rewritten — A voice interface must accept live microphone speech and speak a written response. Select TWO core capabilities.
 
-### Choose the SDK or client (1 scored)
+### Choose the SDK or client (2 scored)
 
 **Recognize:** Project administration vs inference vs specialized API
 
@@ -72,6 +72,7 @@ Start with the input, required output, and constraints.
 [Study this family](index.html#group=16/client-fit)
 
 - **Earlier practice · 003** (`practice-003`) · rewritten — A Python application needs to list Foundry project connections, create agents, and run evaluations. Which client should be the application's main entry point?
+- **Authored · mock coverage 001** (`MOCK-client-fit-001`) · retained — A Python retrieval service must call search() to return matching documents from an existing Azure AI Search index. It has the search service endpoint, index name and a supported credential. Which client directly exposes this query operation?
 
 ### Route easy and difficult requests (10 scored)
 
@@ -857,7 +858,7 @@ Discover tools or delegate to independent agents.
 - **Authored · D2-031** (`AI103-D2-031`) · rewritten — A remote A2A agent declares an authentication scheme in its Agent Card. What must the implementation still do?
 - **Guide 03 · Q3** (`GUIDE-03-Q3`) · rewritten — Which mechanism advertises an independent agent's skills, endpoint and authentication requirements?
 
-### A2A tasks & artifacts (1 scored)
+### A2A tasks & artifacts (2 scored)
 
 **Recognize:** Task ID, later completion, artifacts
 
@@ -868,6 +869,7 @@ Discover tools or delegate to independent agents.
 [Study this family](index.html#group=03/a2a-tasks)
 
 - **Authored · D2-053** (`AI103-D2-053`) · rewritten — A remote agent returns a task identifier and later produces artifacts. What must the caller support?
+- **Authored · mock coverage 002** (`MOCK-a2a-tasks-001`) · retained — An A2A report task enters the input-required state and asks which quarter to analyze. The caller knows the answer is Q3 and has the taskId and contextId. Which action continues this task without creating a duplicate?
 
 ## 04 · Prompting, RAG & training
 
@@ -1526,7 +1528,7 @@ Moderation, prompt attacks, approval, and backend controls.
 - **Sefstratiou · #77** (`WEB-sefstratiou-77-a753153f`) · rewritten — An agent tool creates shipping labels. A network timeout can occur after the backend creates a label but before the agent receives the response. Which design best prevents duplicates?
 - **Guide 11 · Q4** (`GUIDE-11-Q4`) · rewritten — A purchase-order API times out after possibly committing a write. What is the best retry design?
 
-### Bound autonomous loops (1 scored)
+### Bound autonomous loops (2 scored)
 
 **Recognize:** No convergence, repeated expensive calls
 
@@ -1537,6 +1539,7 @@ Moderation, prompt attacks, approval, and backend controls.
 [Study this family](index.html#group=11/bounds)
 
 - **Authored · D1-039** (`AI103-D1-039`) · rewritten — An autonomous research loop keeps invoking tools without converging. Which control should you add?
+- **Authored · mock coverage 003** (`MOCK-bounds-001`) · retained — A group-chat workflow must stop after at most six agent turns, even if the reviewer never approves the result. Normal successful runs should end earlier when approval arrives. Which termination design meets both requirements?
 
 ### Brand symbols, watermarking & disclosure (8 scored)
 

@@ -12,6 +12,17 @@ def build():
     audit=json.loads((ROOT/'sources/question-audit.json').read_text())
     original_version=bank['bankVersion']; bank['compatibleBankVersions']=[original_version];bank['contentHistory']=[]
     original_hashes={q['id']:q['contentHash'] for q in bank['questions']}
+    supplemental=json.loads((ROOT/'sources/supplemental-questions.json').read_text())
+    groups={g['id']:g for g in bank['groups']}; known_ids={q['id'] for q in bank['questions']}
+    for item in supplemental:
+        q=copy.deepcopy(item); group=groups.get(q['groupId'])
+        if q['id'] in known_ids or not group or q['topicId']!=group['topicId']: raise ValueError('Invalid supplemental question: '+q['id'])
+        known_ids.add(q['id'])
+        q['contentHash']=digest({k:q.get(k) for k in ['stem','type','code','options','rows','correct','selectCount','context','caseId']})
+        q['variantId']=q['groupId']+'~'+q['contentHash'][:10]
+        q['sources']=[r['url'] for r in q['references']]
+        bank['questions'].append(q);group['questionIds'].append(q['id'])
+    bank['sourceCounts']={source:sum(q['sourceId']==source for q in bank['questions']) for source in bank['sourceCounts']}
     for q in bank['questions']:
         if q['id'] not in audit: raise ValueError('Missing audit entry: '+q['id'])
         entry=audit[q['id']]
@@ -47,7 +58,7 @@ def build():
     versions['rule']='Pin the API version. Current agentic reasoning uses config.workflow="agentic" in its documented preview contract; unverifiable retired standard/pro items are unscored.'
     search=next(g for g in bank['groups'] if g['id']=='08/search')
     search['rule']='Search Index Data Reader queries documents; Index Data Contributor also writes/deletes documents; Search Service Contributor manages Search objects. Choose the narrow data role for the requested operation.'
-    bank['bankVersion']='topics-2026-10-07-'+digest(revisions)[:12]
+    bank['bankVersion']='topics-2026-10-08-'+digest({'revisions':revisions,'supplemental':supplemental})[:12]
     # Persist known version lineage in source, including draft-only records and later edits.
     # Never discard a historical definition when rebuilding from the immutable baseline.
     lineage_path=ROOT/'sources/content-history.json'
@@ -90,24 +101,29 @@ def build():
         bank['practiceSets'].append({'id':domain['id']+'-code','parentId':domain['id'],'kind':'exam-code','title':domain['title']+' · code completion','description':'Complete the code blanks for this exam part.','questionIds':code_ids})
     code_ids=[q['id'] for q in bank['questions'] if q['isCodeCompletion'] and q.get('scored',True)]
     bank['practiceSets'].append({'id':'code','kind':'code','title':'Code completion','description':'Complete Python, REST, JSON and configuration snippets across all exam parts. Text templates and code exhibits use the same saved answers and reasoning as topic practice.','questionIds':code_ids})
+    if any(g['scoredQuestionCount']<2 for g in bank['groups']): raise ValueError('Each mock family needs two distinct scored questions.')
+    bank['practiceSets'].append({'id':'mock','kind':'mock','title':'All-family mock test','description':'Two distinct questions from every decision family across all topics, mixed into one test.','questionsPerFamily':2,'questionCount':2*len(bank['groups']),'questionIds':[q['id'] for q in bank['questions'] if q.get('scored',True)]})
     dump(ROOT/'data/bank.json',bank)
     payload=json.dumps(bank,ensure_ascii=False).replace('</','<\\/')
     (ROOT/'data/bank.js').write_text('window.TOPIC_BANK = '+payload+';\n')
     dump(ROOT/'data/question-audit.json',audit)
     manifest=json.loads((ROOT/'data/classification-manifest.json').read_text())
     by_id={q['id']:q for q in bank['questions']}
+    existing_manifest={item['id'] for item in manifest}
+    manifest.extend({'id':q['id'],'source':q['sourceId'],'sourceQuestionId':q.get('sourceQuestionId'),'classificationBasis':q['classificationBasis']} for q in bank['questions'] if q['id'] not in existing_manifest)
     for item in manifest:
         q=by_id[item['id']]
-        for field in ['stem','topicId','groupId','relatedGroupIds','variantId','examDomainId','isCodeCompletion']:item[field]=q[field]
+        for field in ['stem','topicId','groupId','relatedGroupIds','variantId','examDomainId','isCodeCompletion','contentHash']:item[field]=q[field]
         item['qualityReview']=q['qualityReview']['status'];item['scored']=q.get('scored',True)
     dump(ROOT/'data/classification-manifest.json',manifest)
     path=ROOT/'data/coverage-report.json';data=json.loads(path.read_text())
-    data.update(date=bank['classifiedAt'],scoredTotal=sum(q.get('scored',True) for q in bank['questions']))
+    data.update(date=bank['classifiedAt'],total=len(bank['questions']),sourceCounts=bank['sourceCounts'],groups={g['id']:len(g['questionIds']) for g in bank['groups']},scoredTotal=sum(q.get('scored',True) for q in bank['questions']))
     data['scoredGroups']={g['id']:g['scoredQuestionCount'] for g in bank['groups']}
     data['variantClusters']=sum(len(v['questionIds'])>1 for v in bank['variants'])
     data['accuracy']='Every item audited; local question/feedback revisions distinguished from immutable imports. Unresolved items are explicitly unscored. Primary documentation supports technical checks; this is unofficial self-learning material, not certified examination guidance.'
     data['qualityReview']={'date':bank['classifiedAt'],'bankVersion':bank['bankVersion'],'counts':bank['qualityCounts'],'materialRevisions':bank['materialRevisionCount'],'record':'question-audit.json'}
     data['examPractice']={'outline':bank['examOutline'],'sets':{s['id']:len(s['questionIds']) for s in bank['practiceSets']},'codeCompletionBlanks':sum(len(q.get('rows',[])) for q in bank['questions'] if q['isCodeCompletion'] and q.get('scored',True))}
+    data['mockPractice']={'families':len(bank['groups']),'questionsPerFamily':2,'questionCount':2*len(bank['groups']),'poolCount':len(bank['practiceSets'][-1]['questionIds'])}
     dump(path,data)
     lines=['# AI-103 · Grouped question map','',f"Reviewed {bank['classifiedAt']}: **{len(bank['questions'])} questions · {data['scoredTotal']} scored · {bank['qualityCounts']['unresolved']} unresolved · {len(bank['topics'])} topics · {len(bank['groups'])} decision families**.",'',
         'Local revisions preserve original attribution. Original imports are in `sources/bank.original.json`; current stems, keys and feedback are compiled from reviewed patches. [Review report](CONTENT-REVIEW.md) · [Per-question audit](data/question-audit.json).','',
@@ -126,7 +142,7 @@ def build():
     for file in (ROOT/'guides').glob('*.html'):
         text=file.read_text()
         for g in bank['groups']:
-            pattern=r'(<li><a href="\.\./index\.html#group='+re.escape(g['id'])+r'">[^<]+</a>) — \d+ questions\. [^<]+</li>'
+            pattern=r'(<li><a href="\.\./index\.html#group='+re.escape(g['id'])+r'">[^<]+</a>) — \d+ (?:scored )?questions\. [^<]+</li>'
             text=re.sub(pattern,lambda m:m[1]+f" — {g['scoredQuestionCount']} scored questions. "+html.escape(g['rule'])+'</li>',text)
         file.write_text(text)
     print(bank['bankVersion'],len(bank['questions']),bank['qualityCounts'])

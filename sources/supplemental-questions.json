@@ -1,0 +1,181 @@
+[
+  {
+    "id": "MOCK-client-fit-001",
+    "topicId": "16",
+    "groupId": "16/client-fit",
+    "domain": "D5",
+    "stem": "A Python retrieval service must call search() to return matching documents from an existing Azure AI Search index. It has the search service endpoint, index name and a supported credential. Which client directly exposes this query operation?",
+    "options": [
+      {
+        "id": "search",
+        "text": "SearchClient from azure.search.documents"
+      },
+      {
+        "id": "index",
+        "text": "SearchIndexClient from azure.search.documents.indexes"
+      },
+      {
+        "id": "project",
+        "text": "AIProjectClient from azure.ai.projects"
+      },
+      {
+        "id": "inference",
+        "text": "OpenAI client for model inference"
+      }
+    ],
+    "correct": [
+      "search"
+    ],
+    "explanation": "Rozhoduje operace nad dokumenty konkrétního indexu. SearchClient s endpointem, názvem indexu a credential zpřístupňuje search(). SearchIndexClient spravuje indexy; případně z něj nejprve získáš SearchClient. AIProjectClient obsluhuje Foundry projekt a OpenAI klient inferenci. Žádný z těchto tří není požadovaný přímý klient pro query dokumentů.",
+    "optionReasoning": {
+      "search": "Přímý klient pro hledání dokumentů v zadaném indexu.",
+      "index": "Spravuje definice indexů; pro query použij jeho get_search_client() nebo vytvoř SearchClient.",
+      "project": "Vhodný pro projektové connections, agenty a evaluace, nikoli tuto přímou query operaci.",
+      "inference": "Vhodný pro volání modelu; sám neposkytuje search() nad Azure AI Search indexem."
+    },
+    "decisionRule": "Nejprve určete operaci: SearchClient hledá dokumenty, SearchIndexClient spravuje indexy, AIProjectClient projekt a OpenAI klient modelovou inferenci.",
+    "references": [
+      {
+        "label": "SearchClient query operation",
+        "url": "https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.searchclient?view=azure-python"
+      },
+      {
+        "label": "SearchIndexClient and get_search_client",
+        "url": "https://learn.microsoft.com/en-us/python/api/azure-search-documents/azure.search.documents.indexes.searchindexclient?view=azure-python"
+      },
+      {
+        "label": "Foundry SDK responsibilities",
+        "url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview"
+      }
+    ],
+    "type": "single",
+    "selectCount": 1,
+    "sourceId": "authored",
+    "sourceLabel": "Authored · mock coverage 001",
+    "relatedGroupIds": [],
+    "scored": true,
+    "reviewStatus": "locally-reviewed",
+    "explanationAuthor": "Local study author",
+    "classificationBasis": "Locally authored second scenario for a previously single-question family.",
+    "provenance": {
+      "kind": "original-authored",
+      "author": "Topic Lab",
+      "reviewedAt": "2026-10-08",
+      "basis": "Primary documentation; original self-learning scenario, no real exam provenance."
+    }
+  },
+  {
+    "id": "MOCK-a2a-tasks-001",
+    "topicId": "03",
+    "groupId": "03/a2a-tasks",
+    "domain": "D2",
+    "stem": "An A2A report task enters the input-required state and asks which quarter to analyze. The caller knows the answer is Q3 and has the taskId and contextId. Which action continues this task without creating a duplicate?",
+    "options": [
+      {
+        "id": "continue",
+        "text": "Send Q3 in a new message with the same taskId and contextId."
+      },
+      {
+        "id": "poll",
+        "text": "Keep polling the task while withholding the requested quarter."
+      },
+      {
+        "id": "restart",
+        "text": "Resubmit the full report request without its task or context IDs."
+      },
+      {
+        "id": "complete",
+        "text": "Treat input-required as completed and consume the final report."
+      }
+    ],
+    "correct": [
+      "continue"
+    ],
+    "explanation": "Rozhoduje stav input-required: agent čeká na další vstup, nikoli na dokončení výpočtu. Nová zpráva s Q3 a původními taskId/contextId pokračuje v téže úloze. Polling chybějící vstup nedodá. Nová nezávislá žádost může založit duplicitní práci. input-required není completed a nezaručuje konečný artifact.",
+    "optionReasoning": {
+      "continue": "Doplní požadovaný vstup a zachová identitu úlohy i kontextu. Pak sleduj další stav a artifacts.",
+      "poll": "Hodí se při běžícím tasku; zde je třeba dodat odpověď na otázku agenta.",
+      "restart": "Hodí se pro novou nezávislou úlohu, ale nezaručuje pokračování původního tasku.",
+      "complete": "Konečný report spotřebuj až po ověření dokončení a výstupu; tento stav znamená přerušení kvůli vstupu."
+    },
+    "decisionRule": "A2A input-required: doplň vstup se stejnými taskId/contextId; odlišuj čekání na vstup od dokončení.",
+    "references": [
+      {
+        "label": "A2A input-required and task continuation",
+        "url": "https://a2a-protocol.org/latest/specification/"
+      }
+    ],
+    "type": "single",
+    "selectCount": 1,
+    "sourceId": "authored",
+    "sourceLabel": "Authored · mock coverage 002",
+    "relatedGroupIds": [],
+    "scored": true,
+    "reviewStatus": "locally-reviewed",
+    "explanationAuthor": "Local study author",
+    "classificationBasis": "Locally authored second scenario for a previously single-question family.",
+    "provenance": {
+      "kind": "original-authored",
+      "author": "Topic Lab",
+      "reviewedAt": "2026-10-08",
+      "basis": "Primary documentation; original self-learning scenario, no real exam provenance."
+    }
+  },
+  {
+    "id": "MOCK-bounds-001",
+    "topicId": "11",
+    "groupId": "11/bounds",
+    "domain": "D1",
+    "stem": "A group-chat workflow must stop after at most six agent turns, even if the reviewer never approves the result. Normal successful runs should end earlier when approval arrives. Which termination design meets both requirements?",
+    "options": [
+      {
+        "id": "both",
+        "text": "End on approval or on the coordinator-enforced six-turn limit."
+      },
+      {
+        "id": "approval",
+        "text": "End only on reviewer approval, without an iteration limit."
+      },
+      {
+        "id": "prompt",
+        "text": "Ask agents to stop by turn six, without enforcing a limit."
+      },
+      {
+        "id": "fixed",
+        "text": "Always run exactly six turns, ignoring earlier approval."
+      }
+    ],
+    "correct": [
+      "both"
+    ],
+    "explanation": "Jsou požadovány dvě hranice: tvrdé maximum šesti turnů a předčasné ukončení při schválení. Orchestrátor musí ukončit běh při první z nich. Samotné schválení nezastaví nekonvergující běh; prompt není vynucený limit. Přesně šest turnů sice dodrží maximum, ale poruší požadavek skončit dříve po schválení.",
+    "optionReasoning": {
+      "both": "Spojí pozitivní stop podmínku s vynuceným maximem; nečeká na schválení neomezeně.",
+      "approval": "Vhodná úspěšná stop podmínka, ale bez limitu nesplní horní hranici.",
+      "prompt": "Užitečná instrukce, která nenahrazuje kontrolu v orchestrátoru.",
+      "fixed": "Vhodné jen pokud musí proběhnout všechny turny; zde se po schválení má skončit dříve."
+    },
+    "decisionRule": "Iterativní orchestrace: úspěšná stop podmínka OR vynucený limit; po dosažení limitu výsledek označ jako neúplný a eskaluj podle aplikace.",
+    "references": [
+      {
+        "label": "Agent Framework iteration limits and custom termination",
+        "url": "https://learn.microsoft.com/en-us/agent-framework/workflows/orchestrations/group-chat"
+      }
+    ],
+    "type": "single",
+    "selectCount": 1,
+    "sourceId": "authored",
+    "sourceLabel": "Authored · mock coverage 003",
+    "relatedGroupIds": [],
+    "scored": true,
+    "reviewStatus": "locally-reviewed",
+    "explanationAuthor": "Local study author",
+    "classificationBasis": "Locally authored second scenario for a previously single-question family.",
+    "provenance": {
+      "kind": "original-authored",
+      "author": "Topic Lab",
+      "reviewedAt": "2026-10-08",
+      "basis": "Primary documentation; original self-learning scenario, no real exam provenance."
+    }
+  }
+]

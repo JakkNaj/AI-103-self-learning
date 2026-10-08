@@ -1,10 +1,10 @@
 {
   "date": "2026-10-08",
-  "total": 970,
+  "total": 973,
   "topicCount": 16,
   "groupCount": 108,
   "sourceCounts": {
-    "authored": 200,
+    "authored": 203,
     "sefstratiou": 226,
     "pvejayan": 419,
     "examtopics": 30,
@@ -18,7 +18,7 @@
   "groups": {
     "16/model-fit": 22,
     "16/service-fit": 7,
-    "16/client-fit": 1,
+    "16/client-fit": 2,
     "16/model-routing": 10,
     "01/sequential": 9,
     "01/concurrent": 3,
@@ -41,7 +41,7 @@
     "02/required": 7,
     "03/mcp": 8,
     "03/a2a": 3,
-    "03/a2a-tasks": 1,
+    "03/a2a-tasks": 2,
     "04/strategy": 4,
     "04/grounding": 4,
     "04/prompts": 7,
@@ -96,7 +96,7 @@
     "11/approval": 14,
     "11/authorization": 21,
     "11/idempotency": 4,
-    "11/bounds": 1,
+    "11/bounds": 2,
     "11/brand": 8,
     "11/privacy": 5,
     "12/entities": 14,
@@ -129,13 +129,13 @@
   "multiConceptQuestions": 92,
   "scope": "Current published banks, all guide/index examples, earlier authored deck. Archives/duplicate projections/private research excluded.",
   "accuracy": "Every item audited; local question/feedback revisions distinguished from immutable imports. Unresolved items are explicitly unscored. Primary documentation supports technical checks; this is unofficial self-learning material, not certified examination guidance.",
-  "scoredTotal": 968,
+  "scoredTotal": 971,
   "qualityReview": {
     "date": "2026-10-08",
-    "bankVersion": "topics-2026-10-07-152a43096b19",
+    "bankVersion": "topics-2026-10-08-ff2b9fccbab0",
     "counts": {
       "rewritten": 887,
-      "retained": 81,
+      "retained": 84,
       "unresolved": 2
     },
     "materialRevisions": 694,
@@ -144,7 +144,7 @@
   "scoredGroups": {
     "16/model-fit": 22,
     "16/service-fit": 7,
-    "16/client-fit": 1,
+    "16/client-fit": 2,
     "16/model-routing": 10,
     "01/sequential": 9,
     "01/concurrent": 3,
@@ -167,7 +167,7 @@
     "02/required": 7,
     "03/mcp": 8,
     "03/a2a": 3,
-    "03/a2a-tasks": 1,
+    "03/a2a-tasks": 2,
     "04/strategy": 4,
     "04/grounding": 4,
     "04/prompts": 7,
@@ -222,7 +222,7 @@
     "11/approval": 14,
     "11/authorization": 21,
     "11/idempotency": 4,
-    "11/bounds": 1,
+    "11/bounds": 2,
     "11/brand": 8,
     "11/privacy": 5,
     "12/entities": 14,
@@ -259,18 +259,25 @@
       "mappingBasis": "Preserve the source domain where provided. Supplemental guide/legacy questions receive a reviewed primary domain based on the deciding skill. This local question mapping is not a Microsoft classification. Weights describe the exam, not the proportions of our bank."
     },
     "sets": {
-      "D1": 247,
+      "D1": 248,
       "D1-code": 11,
-      "D2": 309,
+      "D2": 310,
       "D2-code": 16,
       "D3": 127,
       "D3-code": 6,
       "D4": 147,
       "D4-code": 8,
-      "D5": 138,
+      "D5": 139,
       "D5-code": 5,
-      "code": 46
+      "code": 46,
+      "mock": 971
     },
     "codeCompletionBlanks": 105
+  },
+  "mockPractice": {
+    "families": 108,
+    "questionsPerFamily": 2,
+    "questionCount": 216,
+    "poolCount": 971
   }
 }
