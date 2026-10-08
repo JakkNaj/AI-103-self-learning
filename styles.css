@@ -47,4 +47,7 @@ body{position:relative;isolation:isolate}body::before{content:"";position:absolu
   .question-meta .pill { min-height: 44px; }
   .review-question-list { padding: 0 0 24px; }
 }
-.option.expected { border-width: 1px; }
+.option.expected.answer-correct,.row-answer.answer-correct{border:1px dashed #3e7a50;background:#edf6ee}
+.option.expected.answer-missed,.row-answer.answer-missed{border:1px dashed #a65a1a;background:#fff0e0}
+.answer-correct .answer-tag{color:#2a6037}.answer-missed .answer-tag{color:#874311}
+.row-answer{padding:12px;border-radius:12px;color:var(--color-graphite)}

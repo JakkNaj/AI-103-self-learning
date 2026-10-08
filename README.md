@@ -27,6 +27,8 @@ No login, model/API calls, analytics or synchronization service. Answers, notes,
 
 Answer order is shuffled once per fresh attempt and persists through checks, notes, navigation and reload. **Mark as confused** before or after answering; clear it explicitly when ready. Reuse the note field for what needs explaining.
 
+After **Check answer**, correct choices you selected have a dashed green border and light green background. Correct choices you missed are orange, including each missing choice in a multiple-answer question. Text labels identify both states. Row answers use the same feedback colours; revealed comparison answers are green.
+
 **Next question** sits beside **Check answer / Try again**, before notes and reasoning. Next, Previous and Jump open the question counter at the top of the viewport. Checking answers keeps your position. Answer letters are assigned after shuffling; stored IDs such as `A` are grading identities, not the displayed correct-answer letter. **Try again** starts a fresh shuffled attempt.
 
 The HTTPS app caches its files, guides and exhibits after a successful first load for offline use. Open it online once before going offline. Updates prepare the complete bundle before activation, then reload while retaining saved progress and answer order. Users of older versions should reload online after the update downloads. On a phone, you can add the page to your home screen through the browser's menu.

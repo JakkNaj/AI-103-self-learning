@@ -35,6 +35,32 @@
       if (w.location.hash === hash) { w.location.hash = '#home'; await pause(); }
       w.location.hash = hash; await pause();
     };
+    const feedbackStyle = (element, missed) => {
+      const style = w.getComputedStyle(element);
+      assert(style.borderTopStyle === 'dashed', 'Correct-answer feedback must use dashed borders');
+      assert(style.backgroundColor === (missed ? 'rgb(255, 240, 224)' : 'rgb(237, 246, 238)'), 'Feedback must use the appropriate orange or light-green background');
+      assert(style.borderTopColor === (missed ? 'rgb(166, 90, 26)' : 'rgb(62, 122, 80)'), 'Feedback border must match the correct/missed state');
+      assert(element.textContent.includes(missed ? 'Missed correct answer' : 'Correct answer'), 'Feedback must identify its state in text');
+    };
+    const checkFeedback = q => {
+      if (q.type === 'single' || q.type === 'multi') {
+        for (const input of w.document.querySelectorAll('.options input')) {
+          const option = input.closest('.option'), expected = q.correct.includes(input.value);
+          assert(option.classList.contains('answer-correct') === (expected && input.checked), 'Only selected correct IDs may be green');
+          assert(option.classList.contains('answer-missed') === (expected && !input.checked), 'Every unselected correct ID must be orange');
+          assert(option.classList.contains('expected') === expected, 'Highlight identity must follow the answer ID after shuffling');
+          if (expected) feedbackStyle(option, !input.checked);
+        }
+      } else if (q.type === 'rows') {
+        for (const row of q.rows) {
+          const select = $(`[data-row="${row.id}"]`), answer = select.closest('fieldset').querySelector('.row-answer');
+          const missed = select.value !== q.correct[row.id];
+          assert(answer.classList.contains(missed ? 'answer-missed' : 'answer-correct'), 'Each row must highlight its own correct answer');
+          assert(answer.textContent.includes(row.options.find(o => o.id === q.correct[row.id]).text), 'Row feedback must retain the correct option text');
+          feedbackStyle(answer, missed);
+        }
+      }
+    };
     const grade = async (q, destination = routeFor(q)) => {
       await go(destination); positioned();
       if (q.type === 'rows') {
@@ -51,6 +77,7 @@
       $('.question-actions').scrollIntoView({ block: 'center', behavior: 'instant' });
       const y = w.scrollY; $('[data-action="check"]').click();
       assert(read(q).evaluation.correct, q.id + ' must grade by ID');
+      checkFeedback(q);
       assert(equal(order, read(q).presentation), 'Checking must preserve order');
       assert(w.scrollY === y, 'Checking must not jump to reasoning');
       const next = $('.question-next').getBoundingClientRect(), retry = $('[data-action="retry"]').getBoundingClientRect();
@@ -87,6 +114,7 @@
     const expected = $('.comparison-grid .option.expected');
     assert(expected.querySelector('.option-letter').textContent === 'D', 'Comparison feedback must use the same displayed label');
     assert(expected.textContent.includes(single.options.find(o => o.id === single.correct[0]).text), 'Comparison feedback must retain the option text');
+    feedbackStyle(expected, false);
 
     for (const type of ['multi', 'rows', 'ordering']) {
       const q = bank.questions.find(q => q.type === type && q.scored !== false && !q.caseId);
@@ -209,6 +237,50 @@
     assert($('#source-filter').value === 'all' && equal(queueIds(), newIds), 'Whole-topic entry must include all questions even after a filtered session');
     frame.style.width = '320px'; await go('#topic=15');
     assert(!!topicButton() && w.document.documentElement.scrollWidth <= w.innerWidth, 'Requested topic entry must fit a narrow phone');
-    return { passed: checks, widths: [390, 320], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle' };
+
+    // Missed answers are orange by ID; selected correct answers remain green on partial results.
+    await go(routeFor(single)); $('[data-action="retry"]').click();
+    assert(!$('.answer-correct,.answer-missed'), 'Fresh attempts must hide answer feedback');
+    const wrongSingle = single.options.find(o => !single.correct.includes(o.id));
+    $(`.options input[value="${wrongSingle.id}"]`).click();
+    assert(!$('.answer-correct,.answer-missed'), 'Selecting an answer must not reveal the key');
+    const wrongOrder = read(single).presentation;
+    $('[data-action="check"]').click(); checkFeedback(single);
+    assert(!read(single).evaluation.correct && !$('.option.answer-correct') && !!$('.option.answer-missed'), 'Wrong single answers must reveal the missing correct choice in orange');
+    $('[data-action="confused"]').click(); $('[data-action="confused"]').click();
+    assert(equal(read(single).presentation, wrongOrder), 'Feedback and confusion actions must preserve shuffled answer order');
+    const feedbackReload = loaded(); w.location.reload(); await feedbackReload;
+    checkFeedback(single);
+    assert(equal(read(single).draft, [wrongSingle.id]), 'Reload must preserve the wrong selection with its feedback');
+    await go('#group=' + encodeURIComponent(single.groupId) + '&mode=compare&q=' + single.id);
+    $('[data-action="reveal-compare"]').click();
+    assert(!$('.comparison-grid .answer-missed'), 'Comparison reveal must show the answer key without treating an old attempt as a new miss');
+    feedbackStyle($('.comparison-grid .option.expected'), false);
+
+    const partialMulti = bank.questions.find(q => q.type === 'multi' && q.scored !== false && !q.caseId && q.selectCount >= 3 && q.options.length - q.correct.length >= q.selectCount - 1);
+    await go(routeFor(partialMulti)); $('[data-action="retry"]')?.click();
+    const partialIds = [partialMulti.correct[0], ...partialMulti.options.filter(o => !partialMulti.correct.includes(o.id)).slice(0, partialMulti.selectCount - 1).map(o => o.id)];
+    for (const id of partialIds) $(`.options input[value="${id}"]`).click();
+    const partialOrder = read(partialMulti).presentation;
+    $('[data-action="check"]').click(); checkFeedback(partialMulti);
+    assert(w.document.querySelectorAll('.option.answer-correct').length === 1, 'A partially correct multi-answer attempt must keep its selected correct choice green');
+    assert(w.document.querySelectorAll('.option.answer-missed').length === partialMulti.selectCount - 1, 'Every missing correct multi-answer choice must be orange');
+    assert(equal(read(partialMulti).draft, partialIds) && equal(read(partialMulti).presentation, partialOrder), 'Feedback must not replace selections or reshuffle options');
+    assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Feedback must fit a narrow phone');
+    $('[data-action="retry"]').click();
+    assert(!$('.answer-correct,.answer-missed'), 'Retry must clear both feedback colours');
+    await grade(partialMulti);
+    assert(!$('.option.answer-missed'), 'A later fully correct attempt must have only green correct choices');
+
+    const mixedRows = bank.questions.find(q => q.type === 'rows' && q.scored !== false && !q.caseId && q.rows.length > 1 && q.rows[0].options.length > 1);
+    await go(routeFor(mixedRows)); $('[data-action="retry"]')?.click();
+    for (const [i, row] of mixedRows.rows.entries()) {
+      const select = $(`[data-row="${row.id}"]`);
+      select.value = i === 0 ? row.options.find(o => o.id !== mixedRows.correct[row.id]).id : mixedRows.correct[row.id];
+      select.dispatchEvent(new w.Event('change', { bubbles: true }));
+    }
+    $('[data-action="check"]').click(); checkFeedback(mixedRows);
+    assert(w.document.querySelectorAll('.row-answer.answer-missed').length === 1, 'Only a missed row answer should be orange');
+    return { passed: checks, widths: [390, 320], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle, green/orange single/multi/row feedback' };
   } finally { frame.remove(); }
 })();
