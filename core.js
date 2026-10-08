@@ -74,7 +74,7 @@
     // Explicit false is a tombstone. Older/missing information cannot resurrect it.
     record.confusedAt = new Date(Math.max(Date.parse(at), (Date.parse(record.confusedAt || '') || 0) + 1)).toISOString(); return record.confused;
   }
-  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, topicPositions: {}, topicOrders: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
+  const freshState = bank => ({ schemaVersion: 2, bankVersion: bank.bankVersion, records: {}, retiredRecords: {}, learnedGroupIds: [], positions: {}, topicPositions: {}, topicOrders: {}, setPositions: {}, setOrders: {}, preferences: { source: 'all', status: 'all', related: false, reviewTopic: 'all' }, lastGroup: null });
   function definition(bank, q, hash) {
     return q.contentHash === hash ? q : (bank.contentHistory || []).find(old => old.id === q.id && old.contentHash === hash);
   }
@@ -184,6 +184,18 @@
       if (!bank.topics.some(t => t.id === topic) || !Array.isArray(ids) || ids.length > 10000 || new Set(ids).size !== ids.length || ids.some(id => !safeId(id) || byId.has(id) && byId.get(id).topicId !== topic)) throw Error('Invalid topic order.');
       safe.topicOrders[topic] = ids.filter(id => byId.has(id) && byId.get(id).scored !== false);
     }
+    const practiceSets = new Map((bank.practiceSets || []).map(s => [s.id, new Set(s.questionIds)]));
+    for (const field of ['setPositions','setOrders']) {
+      const values = value[field] === undefined ? {} : value[field];
+      if (!object(values)) throw Error('Invalid practice set '+field+'.');
+      for (const [setId, entry] of Object.entries(values)) {
+        const members = practiceSets.get(setId), ids = field === 'setOrders' ? entry : [entry];
+        if (!members || !Array.isArray(ids) || ids.length > 10000 || new Set(ids).size !== ids.length || ids.some(id => !safeId(id) || byId.has(id) && byId.get(id).scored !== false && !members.has(id))) throw Error('Invalid practice set '+field+'.');
+        const kept = ids.filter(id => members.has(id));
+        if (field === 'setOrders') safe[field][setId] = kept;
+        else if (kept.length) safe[field][setId] = kept[0];
+      }
+    }
     const p = value.preferences;
     if (!object(p) || !sources.includes(p.source) || !statuses.includes(p.status) || typeof p.related !== 'boolean') throw Error('Invalid filters.');
     if (p.reviewTopic !== undefined && p.reviewTopic !== 'all' && !bank.topics.some(t => t.id === p.reviewTopic)) throw Error('Invalid review topic.');
@@ -220,6 +232,8 @@
     a.learnedGroupIds = [...new Set([...a.learnedGroupIds, ...b.learnedGroupIds])]; a.positions = { ...b.positions, ...a.positions };
     a.topicPositions = { ...b.topicPositions, ...a.topicPositions };
     a.topicOrders = { ...b.topicOrders, ...a.topicOrders };
+    a.setPositions = { ...b.setPositions, ...a.setPositions };
+    a.setOrders = { ...b.setOrders, ...a.setOrders };
     return validateBackup(a, bank);
   }
   function matchesStatus(q, record, status) {
@@ -254,6 +268,20 @@
     const selected = new Map(selectQuestions(bank, state, { topicId, source, status }).map(q => [q.id, q]));
     return order.filter(id => selected.has(id)).map(id => selected.get(id));
   }
-  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus, beginTopicOrder, topicQuestions };
+  function beginSetOrder(bank, state, setId, fresh = false, random = Math.random) {
+    const set = bank.practiceSets?.find(s => s.id === setId); if (!set) throw Error('Unknown practice set.');
+    const eligible = new Set(selectQuestions(bank, state).map(q => q.id));
+    const ids = set.questionIds.filter(id => eligible.has(id)); state.setOrders ||= {};
+    const members = new Set(ids), saved = fresh ? [] : (state.setOrders[setId] || []).filter(id => members.has(id));
+    const seen = new Set(saved);
+    state.setOrders[setId] = [...saved, ...shuffle(ids.filter(id => !seen.has(id)), random)];
+    return state.setOrders[setId];
+  }
+  function setQuestions(bank, state, setId, { source = 'all', status = 'all' } = {}, random = Math.random) {
+    const order = beginSetOrder(bank, state, setId, false, random);
+    const selected = new Map(selectQuestions(bank, state, { source, status }).map(q => [q.id,q]));
+    return order.filter(id => selected.has(id)).map(id => selected.get(id));
+  }
+  root.TopicCore = { equal, clone, validAnswer, grade, shuffle, newPresentation, validPresentation, beginAttempt, presentedOptions, toggleConfused, snapshot, freshState, validateBackup, mergeStates, selectQuestions, caseQuestions, matchesStatus, beginTopicOrder, topicQuestions, beginSetOrder, setQuestions };
   if (typeof module !== 'undefined') module.exports = root.TopicCore;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

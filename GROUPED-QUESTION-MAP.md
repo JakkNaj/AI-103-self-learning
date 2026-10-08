@@ -1,6 +1,6 @@
 # AI-103 · Grouped question map
 
-Reviewed 2026-10-07: **970 questions · 968 scored · 2 unresolved · 16 topics · 108 decision families**.
+Reviewed 2026-10-08: **970 questions · 968 scored · 2 unresolved · 16 topics · 108 decision families**.
 
 Local revisions preserve original attribution. Original imports are in `sources/bank.original.json`; current stems, keys and feedback are compiled from reviewed patches. [Review report](CONTENT-REVIEW.md) · [Per-question audit](data/question-audit.json).
 
@@ -817,7 +817,7 @@ Schemas, execution loops, IDs, and reliable tool selection.
 - **Sefstratiou · #181** (`WEB-sefstratiou-181-6d45f3eb`) · rewritten — Complete the response call so at least one configured tool must be used for this diagnostic request.
 - **Praba Vejayan · #85** (`WEB-pvejayan-85-bca5f715`) · rewritten — What does tool_choice="required" force in this request?
 - **ExamTopics · #14** (`WEB-examtopics-14-551afb02`) · rewritten — A Foundry response is allowed exactly one tool: the configured MCP retrieval tool. It must invoke that tool on this response. Which valid Python setting requires a tool call?
-- **ExamTopics · #30** (`WEB-examtopics-30-6a709e3f`) · retained — DRAG DROP - You have a Microsoft Foundry project that contains a deployed ticket-triage agent. You discover that sometimes the agent responds without calling any tools, even when a tool is required. You need to ensure that the agent calls a tool during execution. How should you complete the Python code? To answer, drag the appropriate values to the correct targets. Each value may be used once, more than once, or not at all. You may need to drag the split bar between panes or scroll to view content. NOTE: Each correct selection is worth one point.
+- **ExamTopics · #30** (`WEB-examtopics-30-6a709e3f`) · rewritten — A ticket-triage application uses the current Foundry project OpenAI client and Responses API with a supported model deployment. tool_definitions already contains valid custom function schemas. Each request must produce at least one tool call; no particular tool is mandatory. Complete the request keyword and its value. The application will execute requested functions and return their results in the subsequent tool loop.
 - **Guide 02 · Q3** (`GUIDE-02-Q3`) · rewritten — An agent has retrieval and calculator tools. Every answer must first perform the configured retrieval. Which TWO designs can guarantee that prerequisite, assuming the API supports the selector?
 
 ## 03 · MCP & A2A

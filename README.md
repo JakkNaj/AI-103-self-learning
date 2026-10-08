@@ -14,6 +14,9 @@ Everything is provided **as is, without warranties of accuracy, completeness, fi
 
 ## Study
 
+- **Exam parts:** open **Exam parts** in the navigation. Five mixed tests follow Microsoft's current April 16, 2026 outline: planning/management 25–30%, generative AI/agents 30–35%, vision/text/information extraction 10–15% each. Each part combines questions across topics. Counts are our bank coverage, not the exam distribution. The local mapping and sources are recorded in [exam-section evidence](EXAM-SECTIONS.md).
+- **Code completion:** use the dedicated **46-question / 105-blank** test, or the code-only test within any exam part. Code reading and concept matching are excluded. These exercises already existed; no additional imported question set was needed. The classic-run exercise #30 was revised to the documented current Responses API. Earlier attempts become history; notes/bookmarks/confusion survive.
+
 - **Topics:** use **Test whole topic** in the header to mix all questions from every family. Entering through this button shows all sources/statuses; filters can narrow the test afterwards. The mixed sequence and your position survive navigation, reload and backup/import. **Reshuffle questions** generates a new sequence without resetting answers, notes or flags. Or choose one family to learn its rule and compare variants. Topic and family practice share question records.
 - **Case studies:** read a shared scenario and answer only that case's tasks, in source order.
 - **Review:** revisit confused questions independently of correctness, retry mistakes and practice saved questions. Source/topic filters narrow the queue.
@@ -40,7 +43,7 @@ The HTTPS app caches its files, guides and exhibits after a successful first loa
 - 30 earlier authored practice questions.
 - 675 imported practice questions: 226 Sefstratiou, 419 Praba Vejayan and 30 ExamTopics.
 
-Source attribution and immutable original versions are preserved. Current local revisions are identified separately. **970 reviewed: 886 rewritten, 82 retained, 2 unresolved/unscored (968 scored).** See [the review report](CONTENT-REVIEW.md) and [per-question audit](data/question-audit.json). Some reasoning is in Czech; questions are in English. Private course-note links, research snapshots, personal answers and backups are excluded from this repository.
+Source attribution and immutable original versions are preserved. Current local revisions are identified separately. **970 reviewed: 887 rewritten, 81 retained, 2 unresolved/unscored (968 scored).** See [the review report](CONTENT-REVIEW.md) and [per-question audit](data/question-audit.json). Some reasoning is in Czech; questions are in English. Private course-note links, research snapshots, personal answers and backups are excluded from this repository.
 
 See [the complete grouping map](GROUPED-QUESTION-MAP.md), [classification audit](data/classification-manifest.json), [source/license notices](THIRD_PARTY_NOTICES.txt) and [Inter font license](assets/INTER-LICENSE.txt). Third-party material remains subject to its original terms. [Microsoft's official study guide](https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/ai-103) is the authority for the current exam scope.
 
@@ -57,9 +60,9 @@ python3 scripts/build_bank.py
 node verify.js
 ```
 
-This checks all 968 scored keys, deterministic option shuffling/resume, feedback identity, row/ordering/case behavior, confusion filters/merges, older backups, material-revision history and generated-data consistency. It verifies the app's behavior against the stored keys; it does **not** prove that those keys are factually correct.
+This checks all 968 scored keys, deterministic option shuffling/resume, feedback identity, row/ordering/case behavior, confusion filters/merges, older backups, material-revision history, all exam/code queues and generated-data consistency. It verifies the app's behavior against the stored keys; it does **not** prove that those keys are factually correct.
 
-For the real browser flow, start `serve.py` on a fresh localhost port and evaluate `tests/practice-flow.js` in that page's browser console. It checks mobile navigation, all answer types, shuffled feedback, reload, case/review context, clearing confusion and fresh retries at 390px and 320px. It refuses to run on a public host or a notebook with existing progress.
+For the real browser flow, start `serve.py` on a fresh localhost port and evaluate `tests/practice-flow.js` in that page's browser console. It checks navigation, all answer types, green/orange feedback, exam-part/code queues, shared progress, reload, case/review context, clearing confusion and fresh retries at 390px, 320px and 1402px. It refuses to run on a public host or a notebook with existing progress.
 
 The public compiler combines `sources/bank.original.json` with `sources/revisions.json` and the per-ID review record. It regenerates both bank formats, classification/coverage, the grouped map and guide family summaries. Edit the revision patches and audit record, then run the two commands above. Keep the imported baseline immutable. The compiler maintains `sources/content-history.json` so later revisions retain known backup versions and historical definitions.
 

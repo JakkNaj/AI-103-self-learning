@@ -1,8 +1,8 @@
-# Content review · 2026-10-07
+# Content review · 2026-10-08
 
-**970 reviewed · 886 rewritten · 82 retained · 2 unresolved · 968 scored.**
+**970 reviewed · 887 rewritten · 81 retained · 2 unresolved · 968 scored.**
 
-Rewritten includes **691 material scenario/option/code revisions** and **195 feedback/reference/clarification revisions** that retain the original progress fingerprint. The two unresolved items also receive revision history and remain outside scored practice. Question, family and case IDs remain stable. There are still 16 topics, 108 families and 61 tasks in 10 cases.
+Rewritten includes **692 material scenario/option/code revisions** and **195 feedback/reference/clarification revisions** that retain the original progress fingerprint. The two unresolved items also receive revision history and remain outside scored practice. Question, family and case IDs remain stable. There are still 16 topics, 108 families and 61 tasks in 10 cases.
 
 | Source | Reviewed | Rewritten | Retained | Unresolved | Material scored revisions |
 |---|---:|---:|---:|---:|---:|
@@ -11,7 +11,7 @@ Rewritten includes **691 material scenario/option/code revisions** and **195 fee
 | Earlier practice | 30 | 25 | 5 | 0 | 25 |
 | Sefstratiou | 226 | 198 | 28 | 0 | 28 |
 | Praba Vejayan | 419 | 408 | 11 | 0 | 405 |
-| ExamTopics | 30 | 8 | 21 | 1 | 8 |
+| ExamTopics | 30 | 9 | 20 | 1 | 9 |
 
 ## Audit method and evidence
 
@@ -57,3 +57,11 @@ Confusion merges use its small ISO change timestamp; explicit `false` is a clear
 Actual Chromium browser DOM flows passed at 1402px desktop and a measured 390px mobile iframe: answer/check, mark confusion, note/bookmark, compare/reveal, review/source/topic filtering, clear/empty-state focus, refresh/resume, multi-selection, row answers, ordering and shared case context/order. The mobile toggle measures 44px and A/B/C/D align without shifting after grading; no page-level horizontal overflow was observed. Exported JSON and actual file-input current/legacy imports preserved flags, notes, bookmarks, unchanged progress, revised history and unknown records. With the local HTTP server stopped, reload, confused review/clearing and a guide fetch still worked from the compatible service-worker cache. The final v6 bundle also reloaded offline with a migrated historical attempt, current correct result, note and confusion flag intact.
 
 The native preview host could not capture screenshots or apply its requested viewport resize reliably; mobile checks therefore used an actual 390px same-origin iframe and measured the rendered DOM. Native-phone gestures and a visual screenshot review remain untested. The service worker installs code/data/guides/media as one compatible cache bundle. Existing open clients retain their old bundle until closed; reopen the app online to activate the installed update. Local study progress is preserved.
+
+## 2026-10-08 · Exam-part and completion practice
+
+All 970 questions receive one primary official-domain mapping; 95 guide/legacy items have explicit local assignments. 968 scored questions enter five exam-part queues. The 46-question/105-blank code-completion set excludes complete-code reading and concept matching. Mapping source: `sources/exam-blueprint.json`; primary evidence: [EXAM-SECTIONS.md](EXAM-SECTIONS.md).
+
+**WEB-examtopics-30-6a709e3f:** replaced the old classic run image with a current Responses request. The requirement is at least one tool call, not a specific retrieval tool or automatic client-function execution. Row option identities/key preserved; full per-row explanation repaired. The changed runtime/code requires a fresh attempt and keeps prior results as history. [Microsoft Responses contract](https://learn.microsoft.com/en-us/rest/api/aifoundry/project/responses).
+
+`node verify.js` passes all 968 scored keys, 11 exam/code queue memberships, deterministic permutations, saved-order/filter/import behavior and the newly revised exercise's historical migration. The real browser suite passes 628 assertions at 320px, 390px and 1402px, including all five exam parts, six code queues, code blanks/exhibit, shared notebook state, reload and clearing the final confusion flag. Desktop/mobile screenshots were inspected. With the HTTP server stopped, cached reload restored the code queue, correct result and note; confusion changes saved and the exam evidence page loaded offline. The completed Responses template also parses as valid Python. These update checks supersede the older screenshot/cache-activation limitations above; physical-device touch testing remains outside this verification.

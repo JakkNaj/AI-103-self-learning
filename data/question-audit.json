@@ -6434,9 +6434,12 @@
     ]
   },
   "WEB-examtopics-30-6a709e3f": {
-    "status": "retained",
-    "reason": "Reviewed scenario, canonical key and explanation; retain meaningful foundation, code reading or case-context variation.",
-    "evidence": []
+    "status": "rewritten",
+    "reason": "Current Responses code completion replaces a classic run contract whose required guarantee could not be verified. Row identities/options/key retained; prior attempt becomes history.",
+    "evidence": [
+      "https://learn.microsoft.com/en-us/rest/api/aifoundry/project/responses",
+      "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview"
+    ]
   },
   "practice-001": {
     "status": "retained",

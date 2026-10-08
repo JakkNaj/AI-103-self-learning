@@ -281,6 +281,102 @@
     }
     $('[data-action="check"]').click(); checkFeedback(mixedRows);
     assert(w.document.querySelectorAll('.row-answer.answer-missed').length === 1, 'Only a missed row answer should be orange');
-    return { passed: checks, widths: [390, 320], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle, green/orange single/multi/row feedback' };
+    // Official exam parts combine families while keeping shared notebook records.
+    const examRoute = (id, q) => '#exam=' + id + '&mode=practice' + (q ? '&q=' + encodeURIComponent(q.id) : '');
+    const setButton = id => $(`.detail-hero [data-action="test-set"][href="${examRoute(id)}"]`);
+    const notebook = () => JSON.parse(localStorage.getItem(STORE));
+    for (const width of [390,320]) {
+      frame.style.width = width; await go('#exam');
+      assert(w.document.querySelectorAll('.exam-part-list .family-row').length === 5, 'Exam overview must show all five parts');
+      assert(!!$('.site-header nav a[href="#exam"]'), 'Exam parts must be discoverable in navigation');
+      assert(setButton('code')?.textContent.includes('46'), 'Overview must expose the dedicated code-completion test');
+      assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Exam overview/navigation must fit a phone');
+      const weights = [...w.document.querySelectorAll('.exam-part-list .counter')].map(el => el.textContent);
+      assert(equal(weights, ['25–30% ↗','30–35% ↗','10–15% ↗','10–15% ↗','10–15% ↗']), 'Microsoft weight ranges must stay visible');
+    }
+    frame.style.width = '390px';
+    for (const set of bank.practiceSets) {
+      await go('#exam=' + set.id);
+      assert(!!setButton(set.id), 'Every exam/code overview needs a prominent test entry');
+      assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Each part overview must fit a phone');
+      setButton(set.id).click(); await pause(); positioned();
+      assert(equal([...queueIds()].sort(), [...set.questionIds].sort()), 'Exam/code queue must have exactly its own members');
+      assert(!$('#related-filter'), 'Exam practice must not mix in unrelated questions');
+      assert(queueIds().every(id => set.kind === 'exam' || bank.questions.find(q => q.id === id).isCodeCompletion), 'Code subsets must only contain genuine completions');
+      await go(examRoute(set.id, bank.questions.find(q => q.id === queueIds().at(-1))));
+      assert($('.question-next').textContent === (set.kind === 'exam' ? 'Finish exam part' : 'Finish code practice'), 'Last item must identify the correct finish action');
+      $('.question-next').click(); await pause();
+      assert(w.location.hash === '#exam=' + set.id && !!setButton(set.id), 'Finish must return to the same part');
+    }
+    const part = bank.practiceSets.find(s => s.id === 'D2');
+    await go('#exam=D2');
+    const examRandom = w.Math.random; w.Math.random = seeded(103);
+    setButton('D2').click(); await pause();
+    $('[data-action="mix-topic"]').click(); w.Math.random = examRandom; positioned();
+    const examIds = queueIds(), examQs = examIds.map(id => bank.questions.find(q => q.id === id));
+    assert(equal(examIds, w.TopicCore.shuffle(part.questionIds, seeded(103))), 'Explicit exam remix must use the controlled permutation');
+    const examBoundary = examQs.findIndex(q => q.groupId !== examQs[0].groupId);
+    await go(examRoute(part.id, examQs[examBoundary - 1])); $('.question-next').click(); await pause(); positioned();
+    assert(current().id === examQs[examBoundary].id && new URLSearchParams(w.location.hash.slice(1)).get('exam') === part.id, 'Exam Next must cross families while preserving domain scope');
+    const examQ = examQs.find(q => !read(q)?.evaluation && !q.caseId && q.type === 'single');
+    const examOrder = await grade(examQ, examRoute(part.id,examQ));
+    const examNote = $('[data-note]'); examNote.value = 'Exam-part regression note'; examNote.dispatchEvent(new w.Event('input',{bubbles:true}));
+    $('[data-action="confused"]').click();
+    assert(equal(queueIds(),examIds), 'Grades, notes and confusion must not rearrange the exam queue');
+    await go(routeFor(examQ));
+    assert(equal(read(examQ).presentation,examOrder) && read(examQ).evaluation.correct && read(examQ).confused, 'Exam and family practice must share answers and flags');
+    await go('#exam=D2'); setButton('D2').click(); await pause(); positioned();
+    assert(current().id === examQ.id, 'Exam entry must resume its independent saved position');
+    const examReload = loaded(); w.location.reload(); await examReload; positioned();
+    assert(current().id === examQ.id && equal(queueIds(),examIds) && equal(read(examQ).presentation,examOrder), 'Reload must preserve exam position, queue and option order');
+    assert(equal(notebook().setOrders.D2,examIds) && notebook().setPositions.D2 === examQ.id, 'Export state must include exam queues and positions');
+    const examSource = $('#source-filter'); examSource.value = 'authored'; examSource.dispatchEvent(new w.Event('change',{bubbles:true}));
+    assert(equal(queueIds(),examQs.filter(q => q.sourceId === 'authored').map(q => q.id)), 'Source filter must preserve exam order across families');
+    await go('#exam=D2'); setButton('D2').click(); await pause();
+    assert($('#source-filter').value === 'all' && equal(queueIds(),examIds), 'Header test entry must reset filters and include the whole exam part');
+    const examCase = examQs.find(q => q.caseId); await go(examRoute(part.id,examCase));
+    assert(!!$('.context-block'), 'Exam-mixed case tasks must keep their scenario narrative');
+
+    // Complete code blanks using stable IDs, including the revised Responses exercise.
+    const completion = bank.questions.find(q => q.id === 'WEB-examtopics-30-6a709e3f');
+    frame.style.width = '320px';
+    const completionOrder = await grade(completion,examRoute('code',completion));
+    assert($('.question-instruction').textContent.includes('code blank'), 'Code exercises must explain the blank interaction');
+    assert($('.question-code').textContent.includes('openai_client.responses.create') && !$('.question-images'), 'Revised completion must render the documented Responses template');
+    assert(equal(queueIds().slice().sort(),bank.practiceSets.find(s => s.id === 'code').questionIds.slice().sort()), 'Dedicated test must contain all 46 completions');
+    $('[data-action="confused"]').click();
+    const completionNote = $('[data-note]'); completionNote.value = 'What does required guarantee?'; completionNote.dispatchEvent(new w.Event('input',{bubbles:true}));
+    const codeReload = loaded(); w.location.reload(); await codeReload;
+    assert(equal(read(completion).presentation,completionOrder) && read(completion).confused && read(completion).evaluation.correct, 'Code order, grade and confusion must survive reload');
+    const codeStatus = $('#status-filter'); codeStatus.value = 'confused'; codeStatus.dispatchEvent(new w.Event('change',{bubbles:true}));
+    assert(queueIds().includes(completion.id), 'Code confused filter must include correct-but-confused attempts');
+    let clearedCode = 0;
+    while ($('[data-action="confused"]')) {
+      const flagged = current(), before = read(flagged); $('[data-action="confused"]').click();
+      assert(read(flagged).confused === false && equal(read(flagged).draft,before.draft) && equal(read(flagged).evaluation,before.evaluation), 'Clearing code confusion must leave its answer and grade intact');
+      assert(new URLSearchParams(w.location.hash.slice(1)).get('exam') === 'code', 'Clearing must stay within code practice');
+      if (++clearedCode > 10) throw Error('Code confused review failed to finish');
+    }
+    assert(!!$('.empty-state') && $('#status-filter').value === 'confused', 'Clearing the final code flag must show a filtered empty state');
+    $('[data-action="clear-filters"]').click();
+    assert(queueIds().length === 46, 'Clearing filters must restore all code questions');
+    await go(examRoute('code', bank.questions.find(q => q.id === 'WEB-examtopics-6-57c535b2')));
+    assert(!!$('.question-images img') && w.document.querySelectorAll('[data-row]').length === 2, 'Image-based completion must retain its exhibit and two interactive blanks');
+    assert(w.document.documentElement.scrollWidth <= w.innerWidth, 'Code templates and exhibits must fit a narrow phone');
+    // Desktop keeps the same complete interaction and saved presentation.
+    frame.style.width = '1402px';
+    const desktopQ = bank.questions.find(q => q.isCodeCompletion && !read(q)?.evaluation && q.scored !== false);
+    const desktopOrder = await grade(desktopQ,examRoute('code',desktopQ));
+    const desktopBefore = read(desktopQ);
+    $('[data-action="confused"]').click();
+    const desktopNote = $('[data-note]'); desktopNote.value = 'Desktop code note'; desktopNote.dispatchEvent(new w.Event('input',{bubbles:true}));
+    assert(equal(read(desktopQ).evaluation,desktopBefore.evaluation) && equal(read(desktopQ).presentation,desktopOrder), 'Desktop notebook actions must leave the code grade/order intact');
+    const desktopReload = loaded(); w.location.reload(); await desktopReload; positioned();
+    assert(read(desktopQ).confused && read(desktopQ).note === 'Desktop code note' && equal(read(desktopQ).presentation,desktopOrder), 'Desktop notebook must survive refresh');
+    const desktopStatus = $('#status-filter'); desktopStatus.value = 'confused'; desktopStatus.dispatchEvent(new w.Event('change',{bubbles:true}));
+    assert(equal(queueIds(),[desktopQ.id]), 'Desktop code review must show the newly flagged code question');
+    $('[data-action="confused"]').click();
+    assert(!!$('.empty-state') && read(desktopQ).evaluation.correct && read(desktopQ).note === 'Desktop code note', 'Desktop clearing must show a useful empty state and retain the answer/note');
+    return { passed: checks, widths: [390, 320, 1402], flows: 'Next/Jump/Finish, case/review context, shuffled grading, comparison, reload, notes/flags, retry, all-topic entries, mixed sequence/filters/resume/reshuffle, green/orange feedback, all five exam parts and six code queues, code blanks/exhibit, shared progress and confused-empty flow on desktop/mobile' };
   } finally { frame.remove(); }
 })();

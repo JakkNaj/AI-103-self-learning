@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-07",
+  "date": "2026-10-08",
   "total": 970,
   "topicCount": 16,
   "groupCount": 108,
@@ -131,14 +131,14 @@
   "accuracy": "Every item audited; local question/feedback revisions distinguished from immutable imports. Unresolved items are explicitly unscored. Primary documentation supports technical checks; this is unofficial self-learning material, not certified examination guidance.",
   "scoredTotal": 968,
   "qualityReview": {
-    "date": "2026-10-07",
-    "bankVersion": "topics-2026-10-07-a6821885d9a1",
+    "date": "2026-10-08",
+    "bankVersion": "topics-2026-10-07-152a43096b19",
     "counts": {
-      "rewritten": 886,
-      "retained": 82,
+      "rewritten": 887,
+      "retained": 81,
       "unresolved": 2
     },
-    "materialRevisions": 693,
+    "materialRevisions": 694,
     "record": "question-audit.json"
   },
   "scoredGroups": {
@@ -250,5 +250,27 @@
     "15/keys": 2,
     "15/tokens": 4,
     "15/client": 15
+  },
+  "examPractice": {
+    "outline": {
+      "outlineUrl": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/ai-103",
+      "skillsEffective": "2026-04-16",
+      "verifiedAt": "2026-10-08",
+      "mappingBasis": "Preserve the source domain where provided. Supplemental guide/legacy questions receive a reviewed primary domain based on the deciding skill. This local question mapping is not a Microsoft classification. Weights describe the exam, not the proportions of our bank."
+    },
+    "sets": {
+      "D1": 247,
+      "D1-code": 11,
+      "D2": 309,
+      "D2-code": 16,
+      "D3": 127,
+      "D3-code": 6,
+      "D4": 147,
+      "D4-code": 8,
+      "D5": 138,
+      "D5-code": 5,
+      "code": 46
+    },
+    "codeCompletionBlanks": 105
   }
 }

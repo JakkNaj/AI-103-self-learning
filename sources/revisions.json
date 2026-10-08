@@ -43362,5 +43362,113 @@
       "trap",
       "caveats"
     ]
+  },
+  "WEB-examtopics-30-6a709e3f": {
+    "material": true,
+    "reason": "Replace an unverified classic run image with the documented current Responses tool-choice contract and repair per-row reasoning.",
+    "remove": [
+      "images"
+    ],
+    "patch": {
+      "stem": "A ticket-triage application uses the current Foundry project OpenAI client and Responses API with a supported model deployment. tool_definitions already contains valid custom function schemas. Each request must produce at least one tool call; no particular tool is mandatory. Complete the request keyword and its value. The application will execute requested functions and return their results in the subsequent tool loop.",
+      "code": "# openai_client = project.get_openai_client()\n# deployment_name and tool_definitions are already configured.\nresponse = openai_client.responses.create(\n    model=deployment_name,\n    input=\"Classify this ticket using the configured tools.\",\n    tools=tool_definitions,\n    {{r1}}=\"{{r2}}\",\n)",
+      "rows": [
+        {
+          "id": "r1",
+          "text": "Responses request keyword",
+          "options": [
+            {
+              "id": "A",
+              "text": "auto"
+            },
+            {
+              "id": "B",
+              "text": "required"
+            },
+            {
+              "id": "C",
+              "text": "response_format"
+            },
+            {
+              "id": "D",
+              "text": "tool_choice"
+            },
+            {
+              "id": "E",
+              "text": "tools"
+            },
+            {
+              "id": "F",
+              "text": "type"
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "text": "tool_choice value",
+          "options": [
+            {
+              "id": "A",
+              "text": "auto"
+            },
+            {
+              "id": "B",
+              "text": "required"
+            },
+            {
+              "id": "C",
+              "text": "response_format"
+            },
+            {
+              "id": "D",
+              "text": "tool_choice"
+            },
+            {
+              "id": "E",
+              "text": "tools"
+            },
+            {
+              "id": "F",
+              "text": "type"
+            }
+          ]
+        }
+      ],
+      "format": "code",
+      "explanation": "Rozhodující požadavek: model musí požádat o alespoň jedno volání nástroje. V aktuálním Responses API jej splňuje tool_choice=\"required\". auto dovoluje i odpověď bez nástroje. tools pouze deklaruje dostupné nástroje; neukládá povinnost některý použít. Jména parametrů a hodnoty musí být ve správném řádku. required nevybírá konkrétní nástroj, nezaručuje retrieval a samo neprovádí vlastní funkci: tu zpracuje aplikace a vrátí výsledek v navazujícím kole.",
+      "rowReasoning": {
+        "r1": {
+          "A": "Je hodnota, ne název pole; nástroje by zůstaly volitelné. Kdy se hodí: Jako hodnota tool_choice, když má model rozhodovat sám.",
+          "B": "Je hodnota, ne klíč JSON objektu. Kdy se hodí: Jako hodnota tool_choice pro povinné volání.",
+          "C": "response_format patří do Chat Completions, nikoli mezi tyto parametry Responses. V Responses řídí strukturovaný výstup text.format; ani jedna volba nevynucuje tool call.",
+          "D": "Tento klíč řídí strategii volání nástrojů. Kdy se hodí: Při potřebě auto, none či required chování.",
+          "E": "Definuje dostupné nástroje, ale ne povinnost je zavolat. Kdy se hodí: Při deklaraci toolů dostupných modelu.",
+          "F": "Typ je vnořené pole definice nástroje, ne přepínač povinnosti. Kdy se hodí: V konkrétní tool definici."
+        },
+        "r2": {
+          "A": "Model může odpovědět bez nástroje. Kdy se hodí: Když jsou tool calls volitelné.",
+          "B": "V dokumentovaném Responses API musí model vytvořit jedno nebo více volání dostupných nástrojů. Neurčuje konkrétní nástroj a samo neprovádí vlastní funkci aplikace.",
+          "C": "Název parametru formátování není hodnota režimu tool_choice. Chat Completions používá response_format, Responses text.format.",
+          "D": "Je název parametru, ne jeho hodnota. Kdy se hodí: Na levé straně dvojice klíč–hodnota.",
+          "E": "Je seznam deklarací nástrojů, ne strategie. Kdy se hodí: Při poskytování seznamu nástrojů.",
+          "F": "Je strukturální klíč nástroje, ne režim volání. Kdy se hodí: Při určení druhu konkrétního toolu."
+        }
+      },
+      "decisionRule": "Responses: tools definuje nabídku; tool_choice=\"required\" vyžaduje nejméně jedno volání. Pro konkrétní povinný nástroj použij podporovaný explicitní výběr nebo deterministický krok.",
+      "references": [
+        {
+          "label": "Microsoft Foundry Responses request contract",
+          "url": "https://learn.microsoft.com/en-us/rest/api/aifoundry/project/responses"
+        },
+        {
+          "label": "Foundry project SDK and OpenAI client",
+          "url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/sdk-overview"
+        }
+      ],
+      "answerKeyBasis": "Locally verified against the current Microsoft Foundry Responses contract; replaces the unverified classic run image.",
+      "reviewStatus": "locally-reviewed",
+      "scored": true
+    },
+    "date": "2026-10-08"
   }
 }

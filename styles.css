@@ -51,3 +51,5 @@ body{position:relative;isolation:isolate}body::before{content:"";position:absolu
 .option.expected.answer-missed,.row-answer.answer-missed{border:1px dashed #a65a1a;background:#fff0e0}
 .answer-correct .answer-tag{color:#2a6037}.answer-missed .answer-tag{color:#874311}
 .row-answer{padding:12px;border-radius:12px;color:var(--color-graphite)}
+.exam-skills{margin-bottom:32px}.exam-skills ul{padding-left:20px;margin:0 0 20px}.exam-skills li+li{margin-top:10px}.exam-skills a{text-decoration:underline;text-underline-offset:3px}
+@media(max-width:600px){.site-header nav{gap:8px;font-size:11px}}

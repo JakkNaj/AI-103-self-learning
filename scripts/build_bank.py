@@ -30,11 +30,11 @@ def build():
             q['contentHash']=digest(content)
             # Rewritten scenarios are no longer the old near-duplicate variant.
             q['variantId']=q['groupId']+'~'+q['contentHash'][:10]
-        q['localRevision']={'date':'2026-10-07','material':revision['material'],'reason':revision['reason'],'originalContentHash':old['contentHash']}
+        q['localRevision']={'date':revision.get('date','2026-10-07'),'material':revision['material'],'reason':revision['reason'],'originalContentHash':old['contentHash']}
         q['explanationAuthor'] = 'Local study revision · original source credited'
         q['sources']=[r['url'] for r in q.get('references',[]) if r['url'].startswith('https://')]
     bank['qualityCounts']={key:sum(a['status']==key for a in audit.values()) for key in ['rewritten','retained','unresolved']}
-    bank['classifiedAt']='2026-10-07'
+    bank['classifiedAt']=max(['2026-10-07']+[q['localRevision']['date'] for q in bank['questions'] if q.get('localRevision')])
     variants={}
     for q in bank['questions']:
         variants.setdefault(q['variantId'],{'id':q['variantId'],'groupId':q['groupId'],'questionIds':[]})['questionIds'].append(q['id'])
@@ -70,6 +70,26 @@ def build():
     bank['migrationBanks']=lineage['banks']
     for group in bank['groups']:
         group['scoredQuestionCount']=sum(q.get('scored',True) is not False for q in bank['questions'] if q['groupId']==group['id'])
+    blueprint=json.loads((ROOT/'sources/exam-blueprint.json').read_text())
+    domain_ids={d['id'] for d in blueprint['domains']}
+    missing={q['id'] for q in bank['questions'] if not q.get('domain')}
+    if missing != set(blueprint['additionalAssignments']): raise ValueError('Supplemental exam mapping must cover every guide/legacy item exactly once.')
+    exhibits=set(blueprint['codeCompletionExhibitIds'])
+    if not exhibits <= {q['id'] for q in bank['questions']}: raise ValueError('Unknown code completion exhibit.')
+    for q in bank['questions']:
+        q['examDomainId']=q.get('domain') or blueprint['additionalAssignments'][q['id']]
+        if q['examDomainId'] not in domain_ids: raise ValueError('Invalid exam domain: '+q['id'])
+        # A template token inside complete executable code is not necessarily an exercise blank.
+        q['isCodeCompletion']=q['type']=='rows' and (bool(q.get('code')) or q['id'] in exhibits)
+    bank['examOutline']={k:blueprint[k] for k in ['outlineUrl','skillsEffective','verifiedAt','mappingBasis']}
+    bank['practiceSets']=[]
+    for domain in blueprint['domains']:
+        ids=[q['id'] for q in bank['questions'] if q['examDomainId']==domain['id'] and q.get('scored',True)]
+        code_ids=[q['id'] for q in bank['questions'] if q['id'] in ids and q['isCodeCompletion']]
+        bank['practiceSets'].append(dict(domain,kind='exam',questionIds=ids))
+        bank['practiceSets'].append({'id':domain['id']+'-code','parentId':domain['id'],'kind':'exam-code','title':domain['title']+' · code completion','description':'Complete the code blanks for this exam part.','questionIds':code_ids})
+    code_ids=[q['id'] for q in bank['questions'] if q['isCodeCompletion'] and q.get('scored',True)]
+    bank['practiceSets'].append({'id':'code','kind':'code','title':'Code completion','description':'Complete Python, REST, JSON and configuration snippets across all exam parts. Text templates and code exhibits use the same saved answers and reasoning as topic practice.','questionIds':code_ids})
     dump(ROOT/'data/bank.json',bank)
     payload=json.dumps(bank,ensure_ascii=False).replace('</','<\\/')
     (ROOT/'data/bank.js').write_text('window.TOPIC_BANK = '+payload+';\n')
@@ -78,17 +98,18 @@ def build():
     by_id={q['id']:q for q in bank['questions']}
     for item in manifest:
         q=by_id[item['id']]
-        for field in ['stem','topicId','groupId','relatedGroupIds','variantId']:item[field]=q[field]
+        for field in ['stem','topicId','groupId','relatedGroupIds','variantId','examDomainId','isCodeCompletion']:item[field]=q[field]
         item['qualityReview']=q['qualityReview']['status'];item['scored']=q.get('scored',True)
     dump(ROOT/'data/classification-manifest.json',manifest)
     path=ROOT/'data/coverage-report.json';data=json.loads(path.read_text())
-    data.update(date='2026-10-07',scoredTotal=sum(q.get('scored',True) for q in bank['questions']))
+    data.update(date=bank['classifiedAt'],scoredTotal=sum(q.get('scored',True) for q in bank['questions']))
     data['scoredGroups']={g['id']:g['scoredQuestionCount'] for g in bank['groups']}
     data['variantClusters']=sum(len(v['questionIds'])>1 for v in bank['variants'])
     data['accuracy']='Every item audited; local question/feedback revisions distinguished from immutable imports. Unresolved items are explicitly unscored. Primary documentation supports technical checks; this is unofficial self-learning material, not certified examination guidance.'
-    data['qualityReview']={'date':'2026-10-07','bankVersion':bank['bankVersion'],'counts':bank['qualityCounts'],'materialRevisions':bank['materialRevisionCount'],'record':'question-audit.json'}
+    data['qualityReview']={'date':bank['classifiedAt'],'bankVersion':bank['bankVersion'],'counts':bank['qualityCounts'],'materialRevisions':bank['materialRevisionCount'],'record':'question-audit.json'}
+    data['examPractice']={'outline':bank['examOutline'],'sets':{s['id']:len(s['questionIds']) for s in bank['practiceSets']},'codeCompletionBlanks':sum(len(q.get('rows',[])) for q in bank['questions'] if q['isCodeCompletion'] and q.get('scored',True))}
     dump(path,data)
-    lines=['# AI-103 · Grouped question map','',f"Reviewed 2026-10-07: **{len(bank['questions'])} questions · {data['scoredTotal']} scored · {bank['qualityCounts']['unresolved']} unresolved · {len(bank['topics'])} topics · {len(bank['groups'])} decision families**.",'',
+    lines=['# AI-103 · Grouped question map','',f"Reviewed {bank['classifiedAt']}: **{len(bank['questions'])} questions · {data['scoredTotal']} scored · {bank['qualityCounts']['unresolved']} unresolved · {len(bank['topics'])} topics · {len(bank['groups'])} decision families**.",'',
         'Local revisions preserve original attribution. Original imports are in `sources/bank.original.json`; current stems, keys and feedback are compiled from reviewed patches. [Review report](CONTENT-REVIEW.md) · [Per-question audit](data/question-audit.json).','',
         'Learn a rule → compare credible choices → practice → mark confusion independently of your score. English questions and established Czech/English explanations retained.','']
     for topic in bank['topics']:

@@ -351,6 +351,7 @@ const expandedBank = core.clone(bank), added = { ...core.clone(agentQ), id: 'new
 expandedBank.questions.push(added); expandedBank.groups.find(g => g.id === added.groupId).questionIds.push(added.id);
 assert.deepEqual(core.beginTopicOrder(expandedBank, topicState, '01', false, seeded(4)), [...nextOrder, added.id], 'New questions append without rearranging the existing sequence');
 assert.deepEqual(core.beginTopicOrder(bank, topicState, '01', false, noRandom), nextOrder, 'Retired questions leave the sequence without changing remaining order');
+require('./tests/exam-parts.js')(bank, core);
 require('./tests/service-worker.js')().then(() => {
-  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 mixed topic queues/filters/resume/legacy backups, explicit reshuffle and added/retired items; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
+  console.log(`Passed: ${checked} scored keys; deterministic ID shuffling/resume for every scored item; rows, multi, ordering, 61 case tasks; confusion/filter/merge; schema-1 revision/history migration; all 16 mixed topic queues and 11 exam/code queues, filters/resume/legacy backups, explicit reshuffle and added/retired items; 46 code completions/105 blanks; #30 material-revision migration; runtime/source/classification consistency; known-fix regressions; complete offline-bundle activation/failure. ${bank.qualityCounts.unresolved} unscored.`);
 }).catch(error => { console.error(error); process.exitCode = 1; });
