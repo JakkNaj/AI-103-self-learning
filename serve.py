@@ -6,6 +6,7 @@ import argparse, posixpath
 
 ROOT = Path(__file__).resolve().parent
 ALLOWED = {'index.html','styles.css','core.js','app.js','sw.js','manifest.webmanifest',
+           'quick-tests.html','quick-tests.css','quick-tests.js',
            'README.md','GROUPED-QUESTION-MAP.md','CONTENT-REVIEW.md','EXAM-SECTIONS.md','THIRD_PARTY_NOTICES.txt'}
 
 class Handler(SimpleHTTPRequestHandler):

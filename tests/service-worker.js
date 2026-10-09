@@ -45,6 +45,9 @@ module.exports = async function verifyServiceWorker() {
   }
   const ready = worker(); await ready.run('install');
   assert(ready.steps[0].includes('app.js') && ready.steps[0].includes('data/bank.js'));
+  for (const asset of ['quick-tests.html', 'quick-tests.css', 'quick-tests.js', 'data/quick-tests.js']) {
+    assert(ready.steps[0].includes(asset), 'Quick tests must be available in the complete offline bundle: ' + asset);
+  }
   assert(ready.steps[1].includes('guides/' + bank.topics.find(t => t.guide).guide.replace('.md', '.html')));
   assert.equal(ready.steps[2], 'activate-ready', 'Activation must follow both cache stages');
   const incomplete = worker(true);
